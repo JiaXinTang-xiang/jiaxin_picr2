@@ -52,7 +52,7 @@ export function createObjectKey(options: {
   relativePath?: string;
   namingStrategy?: NamingStrategy;
 }): string {
-  const strategy = options.namingStrategy || 'hash-suffix';
+  const strategy = options.namingStrategy || 'preserve';
   const relativePath = sanitizePath(options.relativePath || '');
   const relativeDirectory = relativePath.includes('/')
     ? relativePath.slice(0, relativePath.lastIndexOf('/'))

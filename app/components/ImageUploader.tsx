@@ -91,7 +91,7 @@ export default function ImageUploader() {
   const [previewImages, setPreviewImages] = useState<PreviewImage[]>([]);
   const [quality, setQuality] = useState(80);
   const [directory, setDirectory] = useState('posts');
-  const [namingStrategy, setNamingStrategy] = useState<NamingStrategy>('hash-suffix');
+  const [namingStrategy, setNamingStrategy] = useState<NamingStrategy>('preserve');
   const [enableWebpCompression, setEnableWebpCompression] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -631,8 +631,8 @@ export default function ImageUploader() {
                 onChange={(event) => setNamingStrategy(event.target.value as NamingStrategy)}
                 className="input-surface w-full px-3 py-2 text-sm"
               >
-                <option value="hash-suffix">原名 + 内容短哈希（推荐）</option>
-                <option value="preserve">保留原名</option>
+                <option value="preserve">保留语义原名（推荐）</option>
+                <option value="hash-suffix">原名 + 内容短哈希</option>
                 <option value="random">完全随机</option>
               </select>
             </label>
@@ -662,7 +662,7 @@ export default function ImageUploader() {
           </div>
           <p className="mt-2 text-xs leading-5 text-[var(--muted)]">
             选择文件夹时不会写入最外层文件夹名；例如目标目录填 posts，文件夹内的
-            tech/vision/a.png 会保存为 posts/tech/vision/a-哈希.webp。
+            tech/vision/a.webp 会保存为 posts/tech/vision/a.webp。
           </p>
 
           {enableWebpCompression ? (

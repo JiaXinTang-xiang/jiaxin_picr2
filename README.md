@@ -74,7 +74,7 @@ bun run dev
 
 - 上传页支持拖拽、文件选择和粘贴图片
 - 支持选择目标目录、整文件夹上传并保留内部相对目录（忽略所选最外层文件夹名）
-- 默认使用“语义原名 + 内容短哈希”，也可保留原名或完全随机
+- 默认保留语义原名，也可选择内容短哈希或完全随机
 - 支持浏览器侧 WebP 压缩预览
 - 图库页支持网格/列表切换、分页、批量删除
 - 图库支持按对象路径前缀筛选，例如 `posts/tech/vision/`
@@ -85,17 +85,17 @@ bun run dev
 博客文章图片推荐按内容分类和文章 slug 存放：
 
 ```text
-posts/{collection}/{category}/{article-slug}/{semantic-name}-{content-hash}.webp
+posts/{collection}/{category}/{article-slug}/{semantic-name}.webp
 ```
 
 示例：
 
 ```text
-posts/tech/vision/camera-calibration/cover-12ab34cd.webp
-posts/monthly/2026-09/team-photo-98ef76ab.webp
+posts/tech/vision/camera-calibration/camera-calibration-cover.webp
+posts/monthly/2026-09/team-photo.webp
 ```
 
-内容哈希来自文件内容。同一图片重复上传会得到同一对象路径；图片内容变化后会自动生成新路径，从而避免 CDN 长缓存显示旧图。
+需要更新图片时使用 `-v2`、`-v3` 等版本后缀，避免覆盖旧地址后受到浏览器或 CDN 缓存影响。
 
 ## 手动验收建议
 

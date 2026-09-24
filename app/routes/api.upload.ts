@@ -64,7 +64,7 @@ export async function action({ request }: Route.ActionArgs) {
       rawNamingStrategy === 'random' ||
       rawNamingStrategy === 'hash-suffix'
         ? rawNamingStrategy
-        : 'hash-suffix';
+        : 'preserve';
 
     const imageInfo = await uploadImage(file, {
       directory: String(formData.get('directory') || ''),
