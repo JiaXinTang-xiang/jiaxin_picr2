@@ -1,0 +1,308 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --paper: #ffffff;
+  --paper-strong: #ffffff;
+  --surface: #f8fafc;
+  --surface-strong: #f3f4f6;
+  --surface-muted: #eef2f7;
+  --shell: #f4f6fb;
+  --shell-strong: #f8fafc;
+  --ink: #111827;
+  --ink-soft: #374151;
+  --muted: #6b7280;
+  --muted-soft: #9ca3af;
+  --accent: #2563eb;
+  --accent-cool: #2563eb;
+  --line: rgba(15, 23, 42, 0.12);
+  --line-strong: rgba(15, 23, 42, 0.2);
+  --danger: #dc2626;
+  --success: #059669;
+}
+
+html {
+  font-family:
+    'Noto Sans SC',
+    'Source Han Sans SC',
+    'PingFang SC',
+    'Microsoft YaHei',
+    sans-serif;
+  background: var(--shell);
+  color: var(--ink);
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--shell);
+  color: var(--ink);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: rgba(37, 99, 235, 0.16);
+  color: var(--ink);
+}
+
+a,
+button,
+input,
+select,
+textarea {
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    opacity 160ms ease;
+}
+
+h1,
+h2,
+h3,
+h4,
+.font-display {
+  font-family:
+    'Noto Sans SC',
+    'Source Han Sans SC',
+    'PingFang SC',
+    'Microsoft YaHei',
+    sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+code,
+pre,
+.font-mono {
+  font-family:
+    'JetBrains Mono',
+    'SFMono-Regular',
+    'Menlo',
+    'Consolas',
+    monospace;
+}
+
+.site-shell {
+  min-height: 100vh;
+}
+
+.panel {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04);
+}
+
+.panel-light {
+  background: #ffffff;
+}
+
+.panel-muted {
+  background: #f8fafc;
+}
+
+.metric-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.eyebrow {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #ffffff;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.button-primary,
+.button-secondary,
+.button-ghost,
+.button-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 0.6rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.button-primary {
+  background: #111827;
+  border-color: #111827;
+  color: #ffffff;
+}
+
+.button-primary:hover {
+  background: #1f2937;
+  border-color: #1f2937;
+}
+
+.button-secondary {
+  background: #ffffff;
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+.button-secondary:hover {
+  border-color: var(--line-strong);
+  background: #f8fafc;
+}
+
+.button-ghost {
+  background: #f8fafc;
+  border-color: var(--line);
+  color: var(--ink-soft);
+}
+
+.button-ghost:hover {
+  background: #f1f5f9;
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.button-danger {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #ffffff;
+}
+
+.button-danger:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.input-surface {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--ink);
+  outline: none;
+}
+
+.input-surface:focus {
+  border-color: rgba(37, 99, 235, 0.5);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.surface-tag {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #f3f4f6;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+}
+
+.page-intro {
+  padding: 1.25rem;
+}
+
+.page-intro-grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.page-title {
+  margin-top: 0.55rem;
+  font-size: 1.9rem;
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+.page-copy {
+  margin-top: 0.75rem;
+  max-width: 48rem;
+  font-size: 0.95rem;
+  line-height: 1.75;
+  color: var(--ink-soft);
+}
+
+.page-actions {
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.page-aside {
+  border-top: 1px solid var(--line);
+  padding-top: 1rem;
+}
+
+.page-note {
+  border-top: 1px solid var(--line);
+  padding-top: 1rem;
+}
+
+.page-note:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.page-note-index {
+  display: inline-flex;
+  min-width: 2rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+@media (min-width: 1024px) {
+  .page-intro {
+    padding: 1.5rem;
+  }
+
+  .page-intro-grid {
+    grid-template-columns: minmax(0, 1.1fr) minmax(16rem, 0.9fr);
+    gap: 1.5rem;
+  }
+
+  .page-aside {
+    border-top: 0;
+    border-left: 1px solid var(--line);
+    padding-top: 0;
+    padding-left: 1.25rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .page-title {
+    font-size: 1.6rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
