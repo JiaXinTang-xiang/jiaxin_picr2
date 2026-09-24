@@ -127,6 +127,7 @@ export default function ImageGallery() {
   const [loadedCount, setLoadedCount] = useState(0);
   const [sortOrder, setSortOrder] = useState<SortOrder>('time-desc');
   const [searchQuery, setSearchQuery] = useState('');
+  const [prefixFilter, setPrefixFilter] = useState('');
   const { toasts, removeToast, showSuccess, showError, showInfo } = useToast();
 
   const currentCursor = cursorHistory[pageIndex] ?? null;
@@ -137,7 +138,7 @@ export default function ImageGallery() {
     }
 
     void loadPage(currentCursor);
-  }, [browseMode, currentCursor]);
+  }, [browseMode, currentCursor, prefixFilter]);
 
   useEffect(() => {
     if (!activeImage) {
@@ -163,6 +164,9 @@ export default function ImageGallery() {
 
     if (cursor) {
       params.set('cursor', cursor);
+    }
+    if (prefixFilter.trim()) {
+      params.set('prefix', prefixFilter.trim());
     }
 
     const response = await fetch(`/api/images?${params.toString()}`);
@@ -248,6 +252,14 @@ export default function ImageGallery() {
   };
 
   const switchToPagedMode = () => {
+    setBrowseMode('page');
+    setPageIndex(0);
+    setCursorHistory([null]);
+    setNextCursor(null);
+  };
+
+  const changePrefixFilter = (value: string) => {
+    setPrefixFilter(value);
     setBrowseMode('page');
     setPageIndex(0);
     setCursorHistory([null]);
@@ -415,7 +427,7 @@ export default function ImageGallery() {
   const visibleImages = useMemo(() => {
     const filtered = normalizedSearch
       ? images.filter((image) =>
-          getDisplayName(image.key).toLowerCase().includes(normalizedSearch)
+          image.key.toLowerCase().includes(normalizedSearch)
         )
       : images;
 
@@ -525,6 +537,23 @@ export default function ImageGallery() {
                     className="button-secondary px-3 py-2"
                   >
                     清空
+                  </button>
+                ) : null}
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  type="text"
+                  value={prefixFilter}
+                  onChange={(event) => changePrefixFilter(event.target.value)}
+                  placeholder="按目录筛选，例如 posts/tech/vision/"
+                  className="input-surface w-full px-3 py-2 font-mono text-sm"
+                />
+                {prefixFilter ? (
+                  <button
+                    onClick={() => changePrefixFilter('')}
+                    className="button-secondary px-3 py-2"
+                  >
+                    全部目录
                   </button>
                 ) : null}
               </div>

@@ -33,7 +33,10 @@ interface PreviewImage {
   compressedPreview?: string;
   compressedFile?: File;
   isProcessing: boolean;
+  relativePath: string;
 }
+
+type NamingStrategy = 'preserve' | 'hash-suffix' | 'random';
 
 const PREVIEW_CONCURRENCY = 2;
 const UPLOAD_CONCURRENCY = 3;
@@ -87,9 +90,11 @@ export default function ImageUploader() {
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const [previewImages, setPreviewImages] = useState<PreviewImage[]>([]);
   const [quality, setQuality] = useState(80);
-  const [useHashName, setUseHashName] = useState(false);
+  const [directory, setDirectory] = useState('posts');
+  const [namingStrategy, setNamingStrategy] = useState<NamingStrategy>('hash-suffix');
   const [enableWebpCompression, setEnableWebpCompression] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
   const previewImagesRef = useRef<PreviewImage[]>([]);
   const compressionRunIdRef = useRef(0);
   const { toasts, removeToast, showSuccess, showError, showInfo } = useToast();
@@ -97,6 +102,19 @@ export default function ImageUploader() {
   useEffect(() => {
     previewImagesRef.current = previewImages;
   }, [previewImages]);
+
+  useEffect(() => {
+    const savedDirectory = window.localStorage.getItem('lightframe-upload-directory');
+    if (savedDirectory) {
+      setDirectory(savedDirectory);
+    }
+    folderInputRef.current?.setAttribute('webkitdirectory', '');
+    folderInputRef.current?.setAttribute('directory', '');
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem('lightframe-upload-directory', directory);
+  }, [directory]);
 
   const createCompressedPreview = async (
     file: File,
@@ -313,6 +331,9 @@ export default function ImageUploader() {
       preview: URL.createObjectURL(file),
       originalSize: file.size,
       isProcessing: enableWebpCompression && canCompress(file),
+      relativePath: file.webkitRelativePath
+        ? file.webkitRelativePath.split('/').slice(1).join('/')
+        : '',
     }));
 
     const mergedPreviewImages = appendPreviews(nextPreviewImages);
@@ -323,10 +344,12 @@ export default function ImageUploader() {
     }
   };
 
-  const uploadFile = async (file: File): Promise<UploadResponse> => {
+  const uploadFile = async (file: File, relativePath: string): Promise<UploadResponse> => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('useHashName', useHashName.toString());
+    formData.append('directory', directory);
+    formData.append('relativePath', relativePath);
+    formData.append('namingStrategy', namingStrategy);
 
     const response = await fetch('/api/upload', {
       method: 'POST',
@@ -366,7 +389,7 @@ export default function ImageUploader() {
               : image.file;
 
           try {
-            const result = await uploadFile(fileToUpload);
+            const result = await uploadFile(fileToUpload, image.relativePath);
             return {
               id: image.id,
               fileName: fileToUpload.name,
@@ -590,16 +613,32 @@ export default function ImageUploader() {
             </div>
           </div>
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <label className="flex items-center gap-3 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-sm text-[var(--ink)]">
+          <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+            <label className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-sm text-[var(--ink)]">
+              <span className="mb-1.5 block text-xs text-[var(--muted)]">目标目录</span>
               <input
-                type="checkbox"
-                checked={useHashName}
-                onChange={(event) => setUseHashName(event.target.checked)}
-                className="h-4 w-4 rounded border-[var(--line-strong)] bg-[var(--paper)] text-[var(--accent)]"
+                type="text"
+                value={directory}
+                onChange={(event) => setDirectory(event.target.value)}
+                placeholder="posts/tech/vision/article-slug"
+                className="input-surface w-full px-3 py-2 font-mono text-sm"
               />
-              <span>随机文件名</span>
             </label>
+            <label className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-sm text-[var(--ink)]">
+              <span className="mb-1.5 block text-xs text-[var(--muted)]">命名方式</span>
+              <select
+                value={namingStrategy}
+                onChange={(event) => setNamingStrategy(event.target.value as NamingStrategy)}
+                className="input-surface w-full px-3 py-2 text-sm"
+              >
+                <option value="hash-suffix">原名 + 内容短哈希（推荐）</option>
+                <option value="preserve">保留原名</option>
+                <option value="random">完全随机</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <label className="flex items-center gap-3 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-sm text-[var(--ink)]">
               <input
                 type="checkbox"
@@ -609,7 +648,22 @@ export default function ImageUploader() {
               />
               <span>WebP 压缩</span>
             </label>
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-sm text-[var(--ink)]">
+              <span>保留文件夹内部结构</span>
+              <button
+                type="button"
+                onClick={() => folderInputRef.current?.click()}
+                className="button-secondary px-3 py-1.5 text-xs"
+                disabled={isUploading}
+              >
+                选择文件夹
+              </button>
+            </div>
           </div>
+          <p className="mt-2 text-xs leading-5 text-[var(--muted)]">
+            选择文件夹时不会写入最外层文件夹名；例如目标目录填 posts，文件夹内的
+            tech/vision/a.png 会保存为 posts/tech/vision/a-哈希.webp。
+          </p>
 
           {enableWebpCompression ? (
             <div className="mt-3 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5">
@@ -640,6 +694,14 @@ export default function ImageUploader() {
 
           <input
             ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/*"
+            onChange={handleFileInput}
+            className="hidden"
+          />
+          <input
+            ref={folderInputRef}
             type="file"
             multiple
             accept="image/*"
@@ -697,7 +759,7 @@ export default function ImageUploader() {
                         className="truncate text-sm font-medium text-[var(--ink)]"
                         title={previewImage.file.name}
                       >
-                        {previewImage.file.name}
+                        {previewImage.relativePath || previewImage.file.name}
                       </p>
                       <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--muted)]">
                         <span>{formatFileSize(previewImage.originalSize)}</span>
@@ -763,8 +825,8 @@ export default function ImageUploader() {
                     className="h-11 w-11 rounded-md object-cover"
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-[var(--ink)]">
-                      {image.key.split('/').pop()}
+                    <p className="truncate text-sm font-medium text-[var(--ink)]" title={image.key}>
+                      {image.key}
                     </p>
                     <p className="mt-0.5 text-xs text-[var(--muted)]">
                       {formatFileSize(image.size)}

@@ -2,8 +2,16 @@ import type { Route } from './+types/api.upload';
 
 import { getMaxFileSize, uploadImage } from '~/lib/r2.server';
 import { ensureAuthenticatedApiRequest } from '~/lib/session.server';
+import type { NamingStrategy } from '~/lib/upload-path';
 
-const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+const allowedTypes = [
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/avif',
+  'image/svg+xml',
+];
 
 export async function action({ request }: Route.ActionArgs) {
   const authError = await ensureAuthenticatedApiRequest(request);
@@ -50,8 +58,18 @@ export async function action({ request }: Route.ActionArgs) {
       );
     }
 
+    const rawNamingStrategy = formData.get('namingStrategy');
+    const namingStrategy: NamingStrategy =
+      rawNamingStrategy === 'preserve' ||
+      rawNamingStrategy === 'random' ||
+      rawNamingStrategy === 'hash-suffix'
+        ? rawNamingStrategy
+        : 'hash-suffix';
+
     const imageInfo = await uploadImage(file, {
-      useHashName: formData.get('useHashName') === 'true',
+      directory: String(formData.get('directory') || ''),
+      relativePath: String(formData.get('relativePath') || ''),
+      namingStrategy,
     });
 
     return Response.json(

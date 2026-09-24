@@ -4,11 +4,13 @@ import {
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
-import { randomUUID } from 'node:crypto';
 import mimeTypes from 'mime-types';
+import { createObjectKey, type NamingStrategy } from './upload-path';
 
 export interface UploadOptions {
-  useHashName?: boolean;
+  directory?: string;
+  relativePath?: string;
+  namingStrategy?: NamingStrategy;
 }
 
 export interface ImageInfo {
@@ -83,19 +85,6 @@ function encodeObjectKey(key: string): string {
     .join('/');
 }
 
-function generateFileName(originalName: string, useHash = false): string {
-  const ext = originalName.includes('.') ? originalName.split('.').pop() || '' : '';
-
-  if (useHash) {
-    const hash = randomUUID().replace(/-/g, '');
-    return ext ? `${hash}.${ext}` : hash;
-  }
-
-  const timestamp = Date.now();
-  const cleanName = originalName.replace(/[^a-zA-Z0-9.-]/g, '_');
-  return `${timestamp}_${cleanName}`;
-}
-
 function getMimeType(objectKey: string, fallback?: string | null): string {
   return fallback || mimeTypes.lookup(objectKey) || 'application/octet-stream';
 }
@@ -120,8 +109,14 @@ export async function uploadImage(file: File, options: UploadOptions = {}): Prom
   const normalizedOriginalName = file.name.includes('.')
     ? file.name
     : `${file.name}.${extFromMime}`;
-  const key = generateFileName(normalizedOriginalName, options.useHashName);
   const body = Buffer.from(await file.arrayBuffer());
+  const key = createObjectKey({
+    originalName: normalizedOriginalName,
+    body,
+    directory: options.directory,
+    relativePath: options.relativePath,
+    namingStrategy: options.namingStrategy,
+  });
 
   await getR2Client().send(
     new PutObjectCommand({
