@@ -93,6 +93,7 @@ export default function ImageUploader() {
   const [directory, setDirectory] = useState('posts');
   const [namingStrategy, setNamingStrategy] = useState<NamingStrategy>('preserve');
   const [enableWebpCompression, setEnableWebpCompression] = useState(true);
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const previewImagesRef = useRef<PreviewImage[]>([]);
@@ -571,34 +572,49 @@ export default function ImageUploader() {
   const recentCountLabel = uploadedImages.length > 0 ? `${uploadedImages.length} 条` : '暂无';
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]">
+    <div className="manage-workspace">
+      <div className="manage-page-heading">
+        <div>
+          <p className="eyebrow accent-eyebrow">管理工作台</p>
+          <h1 className="manage-page-title">把图片放到该去的地方。</h1>
+          <p className="manage-page-description">
+            拖入图片、粘贴截图，处理完成后直接复制链接。游客可以浏览公开画廊，上传和整理仍由你控制。
+          </p>
+        </div>
+        <div className="manage-heading-metrics">
+          <div><strong>{previewImages.length}</strong><span>待处理</span></div>
+          <div><strong>{uploadedImages.length}</strong><span>本次已传</span></div>
+          <a href="/manage/gallery" className="button-secondary">打开图库</a>
+        </div>
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]">
       <div className="space-y-5">
-        <section className="panel panel-light p-4 sm:p-5">
+        <section className="panel panel-light manage-upload-panel p-4 sm:p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold text-[var(--ink)]">上传</h2>
-              <a href="/manage/gallery" className="button-secondary px-3 py-2">
-              图库
-            </a>
+            <div>
+              <p className="eyebrow">快速上传</p>
+              <h2 className="mt-2 text-xl font-semibold text-[var(--ink)]">新建上传任务</h2>
+            </div>
+            <span className="status-pill status-pill-accent">支持多图</span>
           </div>
 
           <div
-            className={`rounded-xl border p-6 text-center ${
-              isDragging
-                ? 'border-[var(--accent)] bg-white'
-                : 'border-dashed border-[var(--line-strong)] bg-[var(--surface)]'
-            }`}
+            className={`upload-dropzone ${isDragging ? 'is-dragging' : ''}`}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
             onDragOver={handleDragOver}
             onDrop={handleDrop}
           >
-            <p className="text-base font-medium text-[var(--ink)]">
+            <div className="upload-dropzone-icon" aria-hidden="true">↑</div>
+            <p className="mt-4 text-base font-semibold text-[var(--ink)]">
               {isDragging ? '松开即可上传' : '拖拽到这里，或直接粘贴截图'}
             </p>
+            <p className="mt-2 text-sm text-[var(--muted)]">也可以选择本地文件或文件夹</p>
             <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="button-primary px-4 py-2.5 disabled:cursor-not-allowed disabled:opacity-50"
+                className="button-primary button-large disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={isUploading}
               >
                 选择文件
@@ -606,13 +622,24 @@ export default function ImageUploader() {
               <button
                 onClick={() => void uploadPreviewImages()}
                 disabled={!canUpload}
-                className="button-secondary px-4 py-2.5 disabled:cursor-not-allowed disabled:opacity-50"
+                className="button-secondary button-large disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isUploading ? '上传中...' : '开始上传'}
               </button>
             </div>
           </div>
 
+          <button
+            type="button"
+            className="advanced-settings-toggle"
+            aria-expanded={showAdvancedSettings}
+            onClick={() => setShowAdvancedSettings((value) => !value)}
+          >
+            <span><strong>高级设置</strong><small>目录、命名、压缩质量</small></span>
+            <span className="advanced-settings-chevron">{showAdvancedSettings ? '收起' : '展开'}⌄</span>
+          </button>
+
+          {showAdvancedSettings ? <div className="advanced-settings-panel">
           <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
             <label className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-sm text-[var(--ink)]">
               <span className="mb-1.5 block text-xs text-[var(--muted)]">目标目录</span>
@@ -682,6 +709,7 @@ export default function ImageUploader() {
               />
             </div>
           ) : null}
+          </div> : null}
 
           <div className="mt-4 flex flex-wrap gap-2 text-xs text-[var(--ink-soft)]">
             <span className="status-pill">队列 {previewImages.length}</span>
@@ -710,7 +738,7 @@ export default function ImageUploader() {
           />
         </section>
 
-        <section className="panel panel-light p-4 sm:p-5">
+        <section className="panel panel-light manage-queue-panel p-4 sm:p-5">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-[var(--ink)]">待上传列表</h3>
             {previewImages.length > 0 ? (
@@ -743,7 +771,7 @@ export default function ImageUploader() {
                 return (
                   <article
                     key={previewImage.id}
-                    className="flex items-center gap-3 rounded-lg border border-[var(--line)] bg-white px-3 py-2.5"
+                    className="upload-queue-item flex items-center gap-3 rounded-lg border px-3 py-2.5"
                   >
                     <img
                       src={
@@ -789,7 +817,7 @@ export default function ImageUploader() {
                     </div>
                     <button
                       onClick={() => void removePreviewImage(previewImage.id)}
-                      className="rounded-md border border-[var(--line)] px-2 py-1 text-xs text-[var(--ink-soft)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]"
+                      className="button-ghost px-2 py-1 text-xs"
                     >
                       删除
                     </button>
@@ -801,7 +829,7 @@ export default function ImageUploader() {
         </section>
       </div>
 
-      <aside className="panel panel-light p-4 sm:p-5 xl:sticky xl:top-[5.2rem] xl:max-h-[calc(100vh-6.2rem)] xl:overflow-y-auto">
+      <aside className="panel panel-light recent-uploads-panel p-4 sm:p-5 xl:sticky xl:top-[5.2rem] xl:max-h-[calc(100vh-6.2rem)] xl:overflow-y-auto">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-[var(--ink)]">可复制</h3>
           <span className="text-xs text-[var(--muted)]">{recentCountLabel}</span>
@@ -816,7 +844,7 @@ export default function ImageUploader() {
             uploadedImages.map((image, index) => (
               <article
                 key={`${image.key}-${index}`}
-                className="rounded-lg border border-[var(--line)] bg-white p-3"
+                className="recent-upload-item rounded-lg border p-3"
               >
                 <div className="flex items-start gap-2.5">
                   <img
@@ -854,6 +882,7 @@ export default function ImageUploader() {
           )}
         </div>
       </aside>
+      </div>
 
       <ToastManager toasts={toasts} removeToast={removeToast} />
     </div>

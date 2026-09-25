@@ -90,8 +90,8 @@ function getToggleButtonClass(active: boolean): string {
   return [
     'inline-flex items-center justify-center rounded-[11px] border px-4 py-2.5 text-[13px] font-semibold transition-all duration-200',
     active
-      ? 'border-[var(--line-strong)] bg-[var(--paper-strong)] text-[var(--ink)] shadow-[0_8px_18px_rgba(24,28,24,0.06)]'
-      : 'border-transparent bg-transparent text-[var(--ink-soft)] hover:border-[var(--line)] hover:bg-[rgba(255,255,255,0.52)] hover:text-[var(--ink)]',
+      ? 'border-[rgba(95,159,213,.35)] bg-[var(--accent-soft)] text-[var(--accent-strong)] shadow-[0_8px_18px_rgba(64,128,181,0.08)]'
+      : 'border-transparent bg-transparent text-[var(--ink-soft)] hover:border-[var(--line)] hover:bg-white hover:text-[var(--ink)]',
   ].join(' ');
 }
 
@@ -100,11 +100,11 @@ function getActionButtonClass(variant: 'secondary' | 'ghost' | 'danger'): string
     'inline-flex items-center justify-center rounded-[12px] border px-3 py-2.5 text-[13px] font-semibold whitespace-nowrap transition-all duration-200';
 
   if (variant === 'secondary') {
-    return `${base} border-[var(--line)] bg-[rgba(255,252,247,0.82)] text-[var(--ink)] hover:border-[var(--line-strong)] hover:bg-[rgba(255,255,255,0.92)]`;
+    return `${base} border-[var(--line)] bg-white text-[var(--ink)] hover:border-[var(--line-strong)] hover:bg-[var(--accent-soft)]`;
   }
 
   if (variant === 'ghost') {
-    return `${base} border-[rgba(89,103,83,0.16)] bg-transparent text-[var(--ink-soft)] hover:border-[var(--line)] hover:bg-[rgba(255,255,255,0.82)] hover:text-[var(--ink)]`;
+    return `${base} border-[var(--line)] bg-transparent text-[var(--ink-soft)] hover:border-[var(--line-strong)] hover:bg-[var(--accent-soft)] hover:text-[var(--ink)]`;
   }
 
   return `${base} border-[rgba(159,97,83,0.18)] bg-[rgba(159,97,83,0.9)] text-[var(--paper-strong)] hover:shadow-[0_10px_24px_rgba(159,97,83,0.14)]`;
@@ -509,11 +509,24 @@ export default function ImageGallery() {
   return (
     <>
       <div className="space-y-6">
-        <section className="panel panel-light p-5 sm:p-6">
+        <div className="manage-page-heading gallery-manage-heading">
+          <div>
+            <p className="eyebrow accent-eyebrow">内容管理</p>
+            <h1 className="manage-page-title">图库</h1>
+            <p className="manage-page-description">集中查看、筛选和复制你的图片资源。</p>
+          </div>
+          <div className="manage-heading-metrics">
+            <div><strong>{loadedCount}</strong><span>当前载入</span></div>
+            <div><strong>{visibleImages.length}</strong><span>当前显示</span></div>
+            <div><strong>{selectedImages.size}</strong><span>已选择</span></div>
+          </div>
+        </div>
+
+        <section className="panel panel-light gallery-control-panel p-5 sm:p-6">
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,28rem)] lg:items-start">
             <div className="min-w-0 space-y-4">
               <div>
-                <p className="eyebrow text-[var(--muted)]">图库管理</p>
+                <p className="eyebrow text-[var(--muted)]">当前浏览</p>
                 <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm text-[var(--ink-soft)]">
                   <span>当前载入 {loadedCount}</span>
                   <span>当前显示 {visibleImages.length}</span>
@@ -560,7 +573,7 @@ export default function ImageGallery() {
             </div>
 
             <div className="grid gap-2">
-              <div className="rounded-[16px] border border-[var(--line)] bg-[rgba(255,252,247,0.68)] p-2">
+              <div className="control-card">
                 <div className="mb-2 flex items-center justify-between px-3">
                   <p className="eyebrow text-[var(--muted)]">读取范围</p>
                   <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
@@ -586,7 +599,7 @@ export default function ImageGallery() {
               </div>
 
               <div className="grid gap-2 sm:grid-cols-2">
-                <div className="rounded-[16px] border border-[var(--line)] bg-[rgba(255,252,247,0.68)] p-2">
+                <div className="control-card">
                   <div className="mb-2 flex items-center justify-between px-3">
                     <p className="eyebrow text-[var(--muted)]">视图</p>
                     <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
@@ -609,7 +622,7 @@ export default function ImageGallery() {
                   </div>
                 </div>
 
-                <div className="rounded-[16px] border border-[var(--line)] bg-[rgba(255,252,247,0.68)] p-2">
+                <div className="control-card">
                   <div className="mb-2 flex items-center justify-between px-3">
                     <p className="eyebrow text-[var(--muted)]">时间排序</p>
                     <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
@@ -633,7 +646,7 @@ export default function ImageGallery() {
                 </div>
               </div>
 
-              <div className="rounded-[16px] border border-[var(--line)] bg-[rgba(255,252,247,0.68)] p-2">
+              <div className="control-card">
                 <div className="mb-2 flex items-center justify-between px-3">
                   <p className="eyebrow text-[var(--muted)]">操作</p>
                   <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
@@ -701,11 +714,11 @@ export default function ImageGallery() {
             </button>
           </div>
         ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          <div className="gallery-grid grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {visibleImages.map((image, index) => (
               <article
                 key={image.key}
-                className={`group overflow-hidden rounded-[18px] border bg-[rgba(255,252,247,0.78)] shadow-[0_14px_34px_rgba(32,30,24,0.05)] transition-all duration-300 ${
+                className={`gallery-card group overflow-hidden rounded-[18px] border bg-white shadow-[0_14px_34px_rgba(57,91,120,0.06)] transition-all duration-300 ${
                   selectedImages.has(image.key)
                     ? 'border-[var(--accent)] shadow-[0_12px_32px_rgba(86,109,90,0.1)]'
                     : 'border-[var(--line)] hover:border-[var(--line-strong)] hover:shadow-[0_16px_36px_rgba(32,30,24,0.08)]'
@@ -724,7 +737,7 @@ export default function ImageGallery() {
                       loading="lazy"
                     />
                   </button>
-                  <div className="absolute left-4 top-4 flex h-9 w-9 items-center justify-center rounded-[12px] border border-[var(--line)] bg-[rgba(255,252,247,0.9)] backdrop-blur">
+                  <div className="absolute left-4 top-4 flex h-9 w-9 items-center justify-center rounded-[12px] border border-[var(--line)] bg-white/90 backdrop-blur">
                     <input
                       type="checkbox"
                       checked={selectedImages.has(image.key)}
@@ -801,7 +814,7 @@ export default function ImageGallery() {
             ))}
           </div>
         ) : (
-          <div className="panel panel-light overflow-hidden p-3 sm:p-4">
+          <div className="panel panel-light gallery-list-panel overflow-hidden p-3 sm:p-4">
             <div className="flex flex-col gap-3 border-b border-[var(--line)] px-2 pb-4 sm:flex-row sm:items-center sm:justify-between">
               <label className="flex items-center gap-3 text-sm text-[var(--ink-soft)]">
                 <input
@@ -821,7 +834,7 @@ export default function ImageGallery() {
               {visibleImages.map((image, index) => (
                 <article
                   key={image.key}
-                  className={`rounded-[16px] border bg-[rgba(255,252,247,0.72)] p-4 transition-all duration-300 ${
+                  className={`gallery-list-item rounded-[16px] border bg-white p-4 transition-all duration-300 ${
                     selectedImages.has(image.key)
                       ? 'border-[var(--accent)] shadow-[0_12px_28px_rgba(86,109,90,0.08)]'
                       : 'border-[var(--line)] hover:border-[var(--line-strong)]'
@@ -966,22 +979,22 @@ export default function ImageGallery() {
       </div>
 
       {activeImage ? (
-        <div
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-[rgba(24,30,24,0.7)] px-4 py-8 backdrop-blur-sm"
+          <div
+          className="gallery-lightbox fixed inset-0 z-[70] flex items-center justify-center px-4 py-8 backdrop-blur-sm"
           onClick={() => setActiveImage(null)}
         >
           <div
-            className="grid max-h-full w-full max-w-6xl gap-0 overflow-hidden rounded-[20px] border border-[var(--line)] bg-[var(--paper-strong)] shadow-[0_40px_110px_rgba(24,30,24,0.18)] lg:grid-cols-[1.25fr_0.75fr]"
+            className="gallery-lightbox-inner grid max-h-full w-full max-w-6xl gap-0 overflow-hidden rounded-[20px] border border-[var(--line)] bg-[var(--paper-strong)] shadow-[0_40px_110px_rgba(39,83,120,0.2)] lg:grid-cols-[1.25fr_0.75fr]"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex min-h-[320px] items-center justify-center bg-[linear-gradient(180deg,rgba(244,240,232,0.96),rgba(233,228,218,0.9))] p-6">
+            <div className="gallery-lightbox-media flex min-h-[320px] items-center justify-center p-6">
               <img
                 src={activeImage.url}
                 alt={getDisplayName(activeImage.key)}
                 className="max-h-[72vh] w-auto max-w-full rounded-[16px] object-contain shadow-[0_26px_80px_rgba(24,30,24,0.14)]"
               />
             </div>
-            <aside className="flex flex-col justify-between gap-6 border-t border-[var(--line)] bg-[rgba(248,245,239,0.88)] p-6 text-[var(--ink)] lg:border-l lg:border-t-0">
+            <aside className="gallery-lightbox-details flex flex-col justify-between gap-6 border-t border-[var(--line)] p-6 text-[var(--ink)] lg:border-l lg:border-t-0">
               <div>
                 <div className="flex items-center justify-between gap-4">
                   <p className="eyebrow text-[var(--muted)]">当前图片</p>
