@@ -1,4 +1,5 @@
 import type { Route } from './+types/about';
+import AppShell from '~/components/AppShell';
 
 const sections = [
   { title: '上传', items: ['拖拽、粘贴、批量选择', '可选随机文件名', '浏览器端 WebP 压缩'] },
@@ -10,11 +11,12 @@ export const meta: Route.MetaFunction = () => [{ title: 'About - Lightframe Arch
 
 export default function AboutRoute() {
   return (
+    <AppShell>
     <div className="space-y-4">
       <section className="panel panel-light p-5 sm:p-6">
         <h1 className="text-lg font-semibold text-[var(--ink)]">使用说明</h1>
         <p className="mt-2 text-sm text-[var(--ink-soft)]">
-          这是一个私有图床后台，核心操作是上传、管理和复制链接。
+          Lightframe 将公开浏览和后台管理分开：游客可以参观 gallery/ 目录，管理员负责上传、整理和复制链接。
         </p>
       </section>
 
@@ -50,5 +52,6 @@ export default function AboutRoute() {
         </div>
       </section>
     </div>
+    </AppShell>
   );
 }

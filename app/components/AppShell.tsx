@@ -10,53 +10,66 @@ interface AppShellProps {
 
 function getNavClass(active: boolean) {
   return [
-    'rounded-lg border px-3 py-2 text-sm font-medium transition-colors',
+    'rounded-xl border px-3 py-2 text-sm font-semibold transition-colors',
     active
-      ? 'border-[var(--line-strong)] bg-white text-[var(--ink)]'
-      : 'border-transparent text-[var(--ink-soft)] hover:border-[var(--line)] hover:bg-white hover:text-[var(--ink)]',
+      ? 'border-[var(--accent)]/20 bg-[var(--accent-soft)] text-[var(--ink)]'
+      : 'border-transparent text-[var(--ink-soft)] hover:border-[var(--line)] hover:bg-white/70 hover:text-[var(--ink)]',
   ].join(' ');
 }
 
 export default function AppShell({ authenticated = false, children }: AppShellProps) {
   const location = useLocation();
   const currentPath =
-    location.pathname === '/gallery' || location.pathname === '/about'
-      ? location.pathname
-      : '/';
+    location.pathname.includes('gallery')
+      ? location.pathname.includes('/manage')
+        ? '/manage/gallery'
+        : '/gallery'
+      : location.pathname.includes('about')
+        ? '/about'
+        : location.pathname.startsWith('/manage')
+          ? '/manage'
+          : '/';
 
   return (
     <div className="site-shell">
-      <header className="sticky top-0 z-40 border-b border-[var(--line)] bg-white/95 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-[1200px] flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <Link to="/" className="flex items-center gap-3">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-xs font-bold tracking-[0.08em] text-[var(--ink)]">
-              LF
+      <header className="site-header">
+        <div className="site-header-inner">
+          <Link to={authenticated ? '/manage' : '/'} className="brand-lockup">
+            <span className="brand-mark"><img src="/brand/avatar.png" alt="" /></span>
+            <span>
+              <span className="brand-name">Lightframe</span>
+              <span className="brand-subtitle">image archive</span>
             </span>
-            <span className="text-sm font-semibold text-[var(--ink)]">Lightframe</span>
           </Link>
 
           {authenticated ? (
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <nav className="flex flex-wrap items-center gap-1 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1">
-                <Link to="/" className={getNavClass(currentPath === '/')}>
-                  上传
+            <div className="header-actions">
+              <nav className="nav-cluster">
+                <Link to="/manage" className={getNavClass(currentPath === '/manage')}>
+                  工作台
                 </Link>
-                <Link to="/gallery" className={getNavClass(currentPath === '/gallery')}>
+                <Link to="/manage/gallery" className={getNavClass(currentPath === '/manage/gallery')}>
                   图库
                 </Link>
-                <Link to="/about" className={getNavClass(currentPath === '/about')}>
-                  说明
+                <Link to="/gallery" className={getNavClass(false)}>
+                  公开画廊
                 </Link>
               </nav>
               <LogoutButton />
             </div>
           ) : (
-            <span className="text-sm text-[var(--muted)]">未登录</span>
+            <div className="header-actions">
+              <nav className="nav-cluster">
+                <Link to="/gallery" className={getNavClass(currentPath === '/gallery')}>画廊</Link>
+                <Link to="/about" className={getNavClass(currentPath === '/about')}>说明</Link>
+              </nav>
+              <Link to="/login" className="button-primary px-4 py-2.5">管理登录</Link>
+            </div>
           )}
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-[1200px] px-4 py-6 sm:px-6">{children}</main>
+      <main className="site-main">{children}</main>
     </div>
   );
 }

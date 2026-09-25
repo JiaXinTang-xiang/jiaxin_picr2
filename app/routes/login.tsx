@@ -9,7 +9,7 @@ export const meta: Route.MetaFunction = () => [{ title: '登录 - Lightframe Arc
 
 export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
-  const nextPath = getSafeNextPath(url.searchParams.get('next'));
+  const nextPath = getSafeNextPath(url.searchParams.get('next') || '/manage');
 
   if (await isAuthenticated(request)) {
     throw redirect(nextPath);
@@ -21,7 +21,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 export default function LoginRoute({ loaderData }: Route.ComponentProps) {
   return (
     <AppShell>
-      <div className="py-6 sm:py-10">
+      <div className="login-layout">
+        <div className="login-art"><img src="/brand/hero-close.jpg" alt="Lightframe 视觉插图" /><div className="login-art-overlay"><p className="eyebrow">LIGHTFRAME / CONTROL ROOM</p><p>让每一张图片，都有一个清晰的位置。</p></div></div>
         <LoginForm nextPath={loaderData.nextPath} />
       </div>
     </AppShell>

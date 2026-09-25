@@ -39,7 +39,7 @@ type SortOrder = 'time-desc' | 'time-asc';
 const IMAGES_PER_PAGE = 60;
 
 function getLoginPath(): string {
-  return `/login?next=${encodeURIComponent('/gallery')}`;
+  return `/login?next=${encodeURIComponent('/manage/gallery')}`;
 }
 
 function getDisplayName(key: string): string {
@@ -678,7 +678,7 @@ export default function ImageGallery() {
               先上传一些内容，再回来整理和复制链接。
             </p>
             <a
-              href="/"
+              href="/manage"
               className="button-primary mt-7"
             >
               去上传图片

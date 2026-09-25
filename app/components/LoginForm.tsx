@@ -4,7 +4,7 @@ interface LoginFormProps {
   nextPath?: string;
 }
 
-export default function LoginForm({ nextPath = '/' }: LoginFormProps) {
+export default function LoginForm({ nextPath = '/manage' }: LoginFormProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -50,10 +50,12 @@ export default function LoginForm({ nextPath = '/' }: LoginFormProps) {
   };
 
   return (
-    <div className="mx-auto max-w-md py-6">
-      <section className="panel panel-light px-6 py-7 sm:px-7">
-        <h2 className="text-lg font-semibold text-[var(--ink)]">管理员登录</h2>
-        <p className="mt-1 text-sm text-[var(--ink-soft)]">输入密码后继续</p>
+    <div className="login-form-wrap">
+      <section className="login-card">
+        <div className="login-avatar"><img src="/brand/avatar.png" alt="" /></div>
+        <p className="eyebrow accent-eyebrow">PRIVATE CONTROL ROOM</p>
+        <h2 className="login-title">欢迎回来</h2>
+        <p className="login-copy">输入管理员密码，继续整理你的图片。</p>
 
         <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
@@ -65,7 +67,7 @@ export default function LoginForm({ nextPath = '/' }: LoginFormProps) {
               name="password"
               type="password"
               required
-              className="input-surface block w-full px-4 py-3 text-sm placeholder:text-[var(--muted-soft)]"
+              className="input-surface input-large block w-full px-4 py-3 text-sm placeholder:text-[var(--muted-soft)]"
               placeholder="请输入管理员密码"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -83,7 +85,7 @@ export default function LoginForm({ nextPath = '/' }: LoginFormProps) {
           <button
             type="submit"
             disabled={loading}
-            className="button-primary w-full disabled:cursor-not-allowed disabled:opacity-50"
+            className="button-primary button-large w-full disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? '登录中...' : '登录'}
           </button>

@@ -159,7 +159,7 @@ export default function ImageUploader() {
   };
 
   const redirectToLogin = () => {
-    window.location.assign(`/login?next=${encodeURIComponent('/')}`);
+    window.location.assign(`/login?next=${encodeURIComponent('/manage')}`);
   };
 
   const syncCompressionState = useCallback(
@@ -576,7 +576,7 @@ export default function ImageUploader() {
         <section className="panel panel-light p-4 sm:p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold text-[var(--ink)]">上传</h2>
-            <a href="/gallery" className="button-secondary px-3 py-2">
+              <a href="/manage/gallery" className="button-secondary px-3 py-2">
               图库
             </a>
           </div>
