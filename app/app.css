@@ -22,6 +22,26 @@
   --success: #329c83;
 }
 
+html.theme-dark {
+  --paper: #17212d;
+  --paper-strong: #1d2a38;
+  --surface: #202e3d;
+  --surface-strong: #26394b;
+  --surface-muted: #1b2937;
+  --shell: #0e151d;
+  --ink: #e8f1f8;
+  --ink-soft: #b7c8d7;
+  --muted: #829caf;
+  --muted-soft: #5c7182;
+  --accent: #72b8ea;
+  --accent-strong: #83c7f4;
+  --accent-soft: rgba(73, 141, 193, .2);
+  --line: rgba(167, 211, 241, .16);
+  --line-strong: rgba(167, 211, 241, .32);
+  --danger: #ef7b8d;
+  --success: #5bc0a4;
+}
+
 html { font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--shell); color: var(--ink); text-rendering: optimizeLegibility; }
 body { margin: 0; min-height: 100vh; background: radial-gradient(circle at 86% 0%, rgba(183, 221, 248, .32), transparent 34rem), var(--shell); color: var(--ink); }
 * { box-sizing: border-box; }
@@ -40,6 +60,8 @@ code, pre, .font-mono { font-family: 'JetBrains Mono', 'SFMono-Regular', Consola
 .brand-name { display: block; font-size: 16px; font-weight: 800; letter-spacing: -.04em; }
 .brand-subtitle { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; }
 .header-actions { display: flex; align-items: center; gap: 10px; }
+.theme-toggle { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--accent-strong); font-size: 1rem; cursor: pointer; }
+.theme-toggle:hover { border-color: var(--line-strong); background: var(--accent-soft); transform: translateY(-1px); }
 .nav-cluster { display: flex; gap: 3px; padding: 4px; border: 1px solid var(--line); border-radius: 15px; background: rgba(235, 243, 250, .62); }
 .button-primary, .button-secondary, .button-ghost, .button-danger { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; border-radius: 12px; padding: .68rem 1rem; font-size: .875rem; font-weight: 700; text-decoration: none; white-space: nowrap; cursor: pointer; }
 .button-primary { background: linear-gradient(135deg, var(--accent-strong), var(--accent)); border-color: var(--accent-strong); color: #fff; box-shadow: 0 10px 24px rgba(64, 128, 181, .18); }
@@ -91,6 +113,25 @@ code, pre, .font-mono { font-family: 'JetBrains Mono', 'SFMono-Regular', Consola
 .gallery-lightbox { background: rgba(13,30,49,.74); }
 .gallery-lightbox-media { background: linear-gradient(180deg, rgba(229,241,251,.98), rgba(207,228,243,.92)); }
 .gallery-lightbox-details { background: rgba(247,251,255,.96); }
+
+html.theme-dark body { background: radial-gradient(circle at 86% 0%, rgba(45, 103, 144, .24), transparent 34rem), var(--shell); }
+html.theme-dark .site-header { background: rgba(14, 21, 29, .86); }
+html.theme-dark .nav-cluster { background: rgba(31, 48, 64, .72); }
+html.theme-dark .button-secondary { background: rgba(29, 42, 56, .82); }
+html.theme-dark .button-secondary:hover { background: var(--surface-strong); }
+html.theme-dark .button-ghost { background: rgba(39, 61, 79, .7); }
+html.theme-dark .input-surface, html.theme-dark .search-field { background: rgba(24, 37, 49, .92); }
+html.theme-dark .panel-light { background: rgba(23, 33, 45, .82); }
+html.theme-dark .panel-muted { background: rgba(27, 41, 55, .8); }
+html.theme-dark .upload-dropzone { background: linear-gradient(145deg, rgba(43, 88, 121, .42), rgba(23, 33, 45, .94)); }
+html.theme-dark .upload-dropzone:hover, html.theme-dark .upload-dropzone.is-dragging { background: var(--accent-soft); }
+html.theme-dark .upload-dropzone-icon, html.theme-dark .recent-upload-item, html.theme-dark .upload-queue-item, html.theme-dark .gallery-card, html.theme-dark .gallery-list-item { background: var(--paper-strong); }
+html.theme-dark .recent-uploads-panel, html.theme-dark .gallery-control-panel { background: rgba(24, 40, 54, .86); }
+html.theme-dark .control-card { background: rgba(34, 54, 70, .7); }
+html.theme-dark .gallery-lightbox-media { background: linear-gradient(180deg, #263f54, #1a2d3e); }
+html.theme-dark .gallery-lightbox-details { background: rgba(23, 33, 45, .98); }
+html.theme-dark .public-lightbox-inner { background: var(--paper-strong); }
+html.theme-dark .public-lightbox-inner > img { background: var(--surface-strong); }
 
 .public-page { display: grid; gap: 32px; }
 .hero-grid { min-height: 610px; display: grid; grid-template-columns: minmax(0, .9fr) minmax(420px, 1.1fr); align-items: center; gap: 40px; padding: 38px 28px 20px; }

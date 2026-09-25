@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
+import { useEffect, useState } from 'react';
 
 import LogoutButton from './LogoutButton';
 
@@ -19,6 +20,24 @@ function getNavClass(active: boolean) {
 
 export default function AppShell({ authenticated = false, children }: AppShellProps) {
   const location = useLocation();
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    const savedTheme = window.localStorage.getItem('lightframe-theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const nextDarkMode = savedTheme ? savedTheme === 'dark' : prefersDark;
+    setDarkMode(nextDarkMode);
+    document.documentElement.classList.toggle('theme-dark', nextDarkMode);
+  }, []);
+
+  const toggleTheme = () => {
+    setDarkMode((current) => {
+      const nextDarkMode = !current;
+      document.documentElement.classList.toggle('theme-dark', nextDarkMode);
+      window.localStorage.setItem('lightframe-theme', nextDarkMode ? 'dark' : 'light');
+      return nextDarkMode;
+    });
+  };
   const currentPath =
     location.pathname.includes('gallery')
       ? location.pathname.includes('/manage')
@@ -46,7 +65,7 @@ export default function AppShell({ authenticated = false, children }: AppShellPr
             <div className="header-actions">
               <nav className="nav-cluster">
                 <Link to="/manage" className={getNavClass(currentPath === '/manage')}>
-                  工作台
+                  上传
                 </Link>
                 <Link to="/manage/gallery" className={getNavClass(currentPath === '/manage/gallery')}>
                   图库
@@ -55,6 +74,15 @@ export default function AppShell({ authenticated = false, children }: AppShellPr
                   公开画廊
                 </Link>
               </nav>
+              <button
+                type="button"
+                className="theme-toggle"
+                onClick={toggleTheme}
+                aria-label={darkMode ? '切换到浅色主题' : '切换到深色主题'}
+                title={darkMode ? '切换到浅色主题' : '切换到深色主题'}
+              >
+                {darkMode ? '☼' : '◐'}
+              </button>
               <LogoutButton />
             </div>
           ) : (
@@ -63,6 +91,15 @@ export default function AppShell({ authenticated = false, children }: AppShellPr
                 <Link to="/gallery" className={getNavClass(currentPath === '/gallery')}>画廊</Link>
                 <Link to="/about" className={getNavClass(currentPath === '/about')}>说明</Link>
               </nav>
+              <button
+                type="button"
+                className="theme-toggle"
+                onClick={toggleTheme}
+                aria-label={darkMode ? '切换到浅色主题' : '切换到深色主题'}
+                title={darkMode ? '切换到浅色主题' : '切换到深色主题'}
+              >
+                {darkMode ? '☼' : '◐'}
+              </button>
               <Link to="/login" className="button-primary px-4 py-2.5">管理登录</Link>
             </div>
           )}

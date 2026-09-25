@@ -558,7 +558,7 @@ export default function ImageGallery() {
                   type="text"
                   value={prefixFilter}
                   onChange={(event) => changePrefixFilter(event.target.value)}
-                  placeholder="按目录筛选，例如 posts/tech/vision/"
+                  placeholder="选择虚拟相册，例如 posts/tech/vision/"
                   className="input-surface w-full px-3 py-2 font-mono text-sm"
                 />
                 {prefixFilter ? (
@@ -570,6 +570,9 @@ export default function ImageGallery() {
                   </button>
                 ) : null}
               </div>
+              <p className="text-xs leading-5 text-[var(--muted)]">
+                目录前缀就是虚拟相册，不新增数据库；输入前缀即可查看对应目录下的图片。
+              </p>
             </div>
 
             <div className="grid gap-2">
