@@ -90,7 +90,8 @@ function getBucketName(): string {
 }
 
 function getPublicUrlBase(): string {
-  return getRequiredEnv('R2_PUBLIC_URL').replace(/\/+$/, '');
+  const configuredUrl = getRequiredEnv('R2_PUBLIC_URL').replace(/\/+$/, '');
+  return /^https?:\/\//i.test(configuredUrl) ? configuredUrl : `https://${configuredUrl}`;
 }
 
 function encodeObjectKey(key: string): string {
