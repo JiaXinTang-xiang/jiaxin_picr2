@@ -20,12 +20,11 @@ function getNavClass(active: boolean) {
 
 export default function AppShell({ authenticated = false, children }: AppShellProps) {
   const location = useLocation();
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
 
   useEffect(() => {
     const savedTheme = window.localStorage.getItem('lightframe-theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const nextDarkMode = savedTheme ? savedTheme === 'dark' : prefersDark;
+    const nextDarkMode = savedTheme ? savedTheme === 'dark' : true;
     setDarkMode(nextDarkMode);
     document.documentElement.classList.toggle('theme-dark', nextDarkMode);
   }, []);

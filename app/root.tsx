@@ -24,12 +24,12 @@ export const links: Route.LinksFunction = () => [
 export const meta: Route.MetaFunction = () => [
   { title: 'Lightframe Archive' },
   { name: 'description', content: 'A React Router image host built for fast uploads and careful archive work.' },
-  { name: 'theme-color', content: '#ede2d3' },
+  { name: 'theme-color', content: '#0e151d' },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {
   return (
-    <html lang="zh-CN">
+    <html lang="zh-CN" className="theme-dark">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />

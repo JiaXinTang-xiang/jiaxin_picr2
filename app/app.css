@@ -156,6 +156,11 @@ html.theme-dark .control-card { background: rgba(34, 54, 70, .7); }
 html.theme-dark .gallery-lightbox-media { background: linear-gradient(180deg, #263f54, #1a2d3e); }
 html.theme-dark .gallery-lightbox-details { background: rgba(23, 33, 45, .98); }
 html.theme-dark .gallery-card { background: var(--paper-strong); }
+html.theme-dark .gallery-list-item { background: var(--paper-strong); }
+html.theme-dark .gallery-card-media > .left-4 { background: rgba(21, 36, 49, .9); }
+html.theme-dark .gallery-control-panel { border-color: rgba(133, 188, 224, .2); }
+html.theme-dark .status-pill { background: var(--paper-strong); color: var(--ink-soft); }
+html.theme-dark .empty-state { background: rgba(23, 33, 45, .84); }
 html.theme-dark .public-image-format, html.theme-dark .detail-metric { background: var(--surface); }
 html.theme-dark .public-lightbox-inner { background: var(--paper-strong); }
 html.theme-dark .public-lightbox-inner > img { background: var(--surface-strong); }
