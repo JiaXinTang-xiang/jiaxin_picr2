@@ -44,8 +44,8 @@ export interface VirtualAlbumInfo {
   cover: ImageInfo | null;
 }
 
-export interface CopyToGalleryResult {
-  copied: Array<{ source: string; target: string; url: string }>;
+export interface MoveToGalleryResult {
+  moved: Array<{ source: string; target: string; url: string }>;
   skipped: Array<{ source: string; reason: string }>;
   failed: Array<{ source: string; error: string }>;
 }
@@ -231,15 +231,18 @@ function encodeCopySource(bucket: string, key: string): string {
     .join('/')}`;
 }
 
-async function objectExists(key: string): Promise<boolean> {
+async function getObjectIdentity(key: string): Promise<{ etag: string; size: number } | null> {
   try {
-    await getR2Client().send(
+    const result = await getR2Client().send(
       new HeadObjectCommand({
         Bucket: getBucketName(),
         Key: key,
       })
     );
-    return true;
+    return {
+      etag: result.ETag || '',
+      size: result.ContentLength || 0,
+    };
   } catch (error) {
     const name = error && typeof error === 'object' && 'name' in error
       ? String((error as { name?: unknown }).name)
@@ -249,24 +252,14 @@ async function objectExists(key: string): Promise<boolean> {
       : 0;
 
     if (name === 'NotFound' || name === 'NoSuchKey' || status === 404) {
-      return false;
+      return null;
     }
 
     throw error;
   }
 }
 
-function addCopySuffix(key: string): string {
-  const slashIndex = key.lastIndexOf('/');
-  const directory = slashIndex >= 0 ? key.slice(0, slashIndex + 1) : '';
-  const filename = slashIndex >= 0 ? key.slice(slashIndex + 1) : key;
-  const extensionIndex = filename.lastIndexOf('.');
-  const stem = extensionIndex > 0 ? filename.slice(0, extensionIndex) : filename;
-  const extension = extensionIndex > 0 ? filename.slice(extensionIndex) : '';
-  return `${directory}${stem}-copy-${Date.now()}${extension}`;
-}
-
-async function copyImageToGallery(source: string): Promise<{ source: string; target: string; url: string } | { source: string; skipped: string }> {
+async function moveImageToGallery(source: string): Promise<{ source: string; target: string; url: string } | { source: string; skipped: string }> {
   const normalizedSource = source.trim().replace(/^\/+/, '');
   if (!normalizedSource || normalizedSource.includes('..') || normalizedSource.includes('\\')) {
     throw new Error('Invalid source key');
@@ -276,9 +269,19 @@ async function copyImageToGallery(source: string): Promise<{ source: string; tar
     return { source: normalizedSource, skipped: 'already-public' };
   }
 
-  let target = `gallery/${normalizedSource}`;
-  if (await objectExists(target)) {
-    target = addCopySuffix(target);
+  const target = `gallery/${normalizedSource}`;
+  const existingTarget = await getObjectIdentity(target);
+  if (existingTarget) {
+    const sourceIdentity = await getObjectIdentity(normalizedSource);
+    if (sourceIdentity && sourceIdentity.etag === existingTarget.etag && sourceIdentity.size === existingTarget.size) {
+      await deleteImage(normalizedSource);
+      return {
+        source: normalizedSource,
+        target,
+        url: `${getPublicUrlBase()}/${encodeObjectKey(target)}`,
+      };
+    }
+    return { source: normalizedSource, skipped: 'target-exists' };
   }
 
   await getR2Client().send(
@@ -290,6 +293,17 @@ async function copyImageToGallery(source: string): Promise<{ source: string; tar
     })
   );
 
+  try {
+    await deleteImage(normalizedSource);
+  } catch (error) {
+    try {
+      await deleteImage(target);
+    } catch (rollbackError) {
+      console.error('Failed to roll back gallery move:', rollbackError);
+    }
+    throw error;
+  }
+
   return {
     source: normalizedSource,
     target,
@@ -297,11 +311,11 @@ async function copyImageToGallery(source: string): Promise<{ source: string; tar
   };
 }
 
-export async function copyImagesToGallery(keys: string[]): Promise<CopyToGalleryResult> {
+export async function moveImagesToGallery(keys: string[]): Promise<MoveToGalleryResult> {
   const uniqueKeys = [...new Set(keys.map((key) => key.trim()).filter(Boolean))];
-  const results = await Promise.allSettled(uniqueKeys.map((key) => copyImageToGallery(key)));
+  const results = await Promise.allSettled(uniqueKeys.map((key) => moveImageToGallery(key)));
 
-  return results.reduce<CopyToGalleryResult>(
+  return results.reduce<MoveToGalleryResult>(
     (accumulator, result, index) => {
       const source = uniqueKeys[index];
 
@@ -309,7 +323,7 @@ export async function copyImagesToGallery(keys: string[]): Promise<CopyToGallery
         if ('skipped' in result.value) {
           accumulator.skipped.push({ source, reason: result.value.skipped });
         } else {
-          accumulator.copied.push(result.value);
+          accumulator.moved.push(result.value);
         }
         return accumulator;
       }
@@ -320,7 +334,7 @@ export async function copyImagesToGallery(keys: string[]): Promise<CopyToGallery
       });
       return accumulator;
     },
-    { copied: [], skipped: [], failed: [] }
+    { moved: [], skipped: [], failed: [] }
   );
 }
 

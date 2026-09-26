@@ -43,9 +43,9 @@ function getLoginPath(): string {
   return `/login?next=${encodeURIComponent('/manage/gallery')}`;
 }
 
-interface CopyToGalleryResponse {
+interface MoveToGalleryResponse {
   success: boolean;
-  copied?: Array<{ source: string; target: string; url: string }>;
+  moved?: Array<{ source: string; target: string; url: string }>;
   skipped?: Array<{ source: string; reason: string }>;
   failed?: Array<{ source: string; error: string }>;
   error?: string;
@@ -89,7 +89,7 @@ function getActionButtonClass(variant: 'secondary' | 'ghost' | 'danger'): string
     'inline-flex items-center justify-center rounded-[12px] border px-3 py-2.5 text-[13px] font-semibold whitespace-nowrap transition-all duration-200';
 
   if (variant === 'secondary') {
-    return `${base} border-[var(--line)] bg-white text-[var(--ink)] hover:border-[var(--line-strong)] hover:bg-[var(--accent-soft)]`;
+    return `${base} gallery-action-secondary border-[var(--line)] bg-white text-[var(--ink)] hover:border-[var(--line-strong)] hover:bg-[var(--accent-soft)]`;
   }
 
   if (variant === 'ghost') {
@@ -119,8 +119,7 @@ export default function ImageGallery() {
   const [prefixFilter, setPrefixFilter] = useState('');
   const [formatFilter, setFormatFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
-  const [publishedKeys, setPublishedKeys] = useState<Set<string>>(new Set());
-  const [copyingKeys, setCopyingKeys] = useState<Set<string>>(new Set());
+  const [movingKeys, setMovingKeys] = useState<Set<string>>(new Set());
   const { toasts, removeToast, showSuccess, showError, showInfo } = useToast();
 
   const currentCursor = cursorHistory[pageIndex] ?? null;
@@ -321,24 +320,24 @@ export default function ImageGallery() {
     await deleteImages(Array.from(selectedImages));
   };
 
-  const copyToGallery = async (keys: string[]) => {
+  const moveToGallery = async (keys: string[]) => {
     const uniqueKeys = [...new Set(keys.filter(Boolean))];
     if (uniqueKeys.length === 0) {
       showInfo('请先选择要发布的图片');
       return;
     }
 
-    if (!window.confirm(`将 ${uniqueKeys.length} 张图片复制到公开画廊？游客将可以看到副本。原图不会删除。`)) {
+    if (!window.confirm(`将 ${uniqueKeys.length} 张图片移动到公开画廊？移动后原位置不再保留。`)) {
       return;
     }
 
     try {
       setActionLoading(true);
-      setCopyingKeys(new Set(uniqueKeys));
+      setMovingKeys(new Set(uniqueKeys));
       const response = await fetch('/api/images', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'copy-to-gallery', keys: uniqueKeys }),
+        body: JSON.stringify({ action: 'move-to-gallery', keys: uniqueKeys }),
       });
 
       if (response.status === 401) {
@@ -346,31 +345,40 @@ export default function ImageGallery() {
         return;
       }
 
-      const result = (await response.json().catch(() => ({}))) as CopyToGalleryResponse;
+      const result = (await response.json().catch(() => ({}))) as MoveToGalleryResponse;
       if (!response.ok) {
         showError(result.error || '发布到公开画廊失败');
         return;
       }
 
-      const copiedCount = result.copied?.length || 0;
+      const movedCount = result.moved?.length || 0;
       const skippedCount = result.skipped?.length || 0;
       const failedCount = result.failed?.length || 0;
-      if (copiedCount > 0) {
-        setPublishedKeys((previous) => new Set([...previous, ...(result.copied || []).map((item) => item.source)]));
-        showSuccess(copiedCount === 1 ? '已复制到公开画廊' : `已复制 ${copiedCount} 张到公开画廊`);
+      if (movedCount > 0) {
+        setActiveImage(null);
+        showSuccess(movedCount === 1 ? '已移动到公开画廊' : `已移动 ${movedCount} 张到公开画廊`);
       }
       if (skippedCount > 0) {
-        showInfo(`${skippedCount} 张已在公开画廊中`);
+        const targetExistsCount = result.skipped?.filter((item) => item.reason === 'target-exists').length || 0;
+        showInfo(targetExistsCount > 0
+          ? `${targetExistsCount} 张未移动：画廊中已有同名图片`
+          : `${skippedCount} 张已在公开画廊中`);
       }
       if (failedCount > 0) {
         showError(`${failedCount} 张发布失败`);
       }
     } catch (err) {
-      console.error('复制到公开画廊失败:', err);
+      console.error('移动到公开画廊失败:', err);
       showError('发布失败: 网络错误');
     } finally {
       setActionLoading(false);
-      setCopyingKeys(new Set());
+      setMovingKeys(new Set());
+    }
+
+    if (browseMode === 'all') {
+      await loadAllImages();
+    } else {
+      await loadPage(currentCursor);
     }
   };
 
@@ -378,7 +386,7 @@ export default function ImageGallery() {
     event.preventDefault();
     const key = event.dataTransfer.getData('text/plain');
     if (key) {
-      void copyToGallery([key]);
+      void moveToGallery([key]);
     }
   };
 
@@ -789,7 +797,7 @@ export default function ImageGallery() {
                   <p className="eyebrow text-[var(--accent-strong)]">公开画廊投放区</p>
                   <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">拖入单张图片</span>
                 </div>
-                <p className="px-3 text-sm leading-6 text-[var(--ink-soft)]">把图库中的图片拖到这里，会复制到 gallery/ 并对游客公开。原图会保留。</p>
+                <p className="px-3 text-sm leading-6 text-[var(--ink-soft)]">把图库中的图片拖到这里，会移动到 gallery/ 并直接对游客公开，原位置不再保留。</p>
               </div>
 
               <div className={`control-card ${selectedImages.size > 0 ? 'bulk-action-active' : ''}`}>
@@ -824,7 +832,7 @@ export default function ImageGallery() {
                     {actionLoading ? '处理中...' : '删除'}
                   </button>
                   <button
-                    onClick={() => void copyToGallery(Array.from(selectedImages))}
+                    onClick={() => void moveToGallery(Array.from(selectedImages))}
                     disabled={selectedImages.size === 0 || actionLoading}
                     className="button-primary px-4 py-2.5 disabled:cursor-not-allowed disabled:opacity-50"
                   >
@@ -911,7 +919,7 @@ export default function ImageGallery() {
                   <div className="gallery-card-hover-meta">
                     <div className="min-w-0">
                       <h3 title={getDisplayName(image.key)}>{getDisplayStem(image.key)}</h3>
-                      {(image.key.startsWith('gallery/') || publishedKeys.has(image.key)) ? <span>已公开</span> : null}
+                      {image.key.startsWith('gallery/') ? <span>已公开</span> : null}
                     </div>
                     <small>查看详情 ↗</small>
                   </div>
@@ -1161,15 +1169,15 @@ export default function ImageGallery() {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <button
-                    onClick={() => void copyToGallery([activeImage.key])}
-                    disabled={copyingKeys.has(activeImage.key) || activeImage.key.startsWith('gallery/') || publishedKeys.has(activeImage.key)}
+                    onClick={() => void moveToGallery([activeImage.key])}
+                    disabled={movingKeys.has(activeImage.key) || activeImage.key.startsWith('gallery/')}
                     className={`${getActionButtonClass('secondary')} col-span-2 disabled:cursor-not-allowed disabled:opacity-50`}
                   >
-                    {copyingKeys.has(activeImage.key)
-                      ? '正在发布到公开画廊…'
-                      : activeImage.key.startsWith('gallery/') || publishedKeys.has(activeImage.key)
+                    {movingKeys.has(activeImage.key)
+                      ? '正在移动到公开画廊…'
+                      : activeImage.key.startsWith('gallery/')
                         ? '已发布到公开画廊'
-                        : '复制到公开画廊'}
+                        : '移动到公开画廊'}
                   </button>
                   <button
                     onClick={() => void deleteImage(activeImage.key)}

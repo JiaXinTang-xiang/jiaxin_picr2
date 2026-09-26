@@ -25,13 +25,13 @@ export default function Toast({ message, type = 'success', duration = 3000, onCl
   const getTypeStyles = () => {
     switch (type) {
       case 'success':
-        return 'border-[rgba(5,150,105,0.3)] bg-[rgba(236,253,245,0.96)] text-[var(--ink)]';
+        return 'toast-success';
       case 'error':
-        return 'border-[rgba(220,38,38,0.3)] bg-[rgba(254,242,242,0.96)] text-[var(--ink)]';
+        return 'toast-error';
       case 'info':
-        return 'border-[rgba(59,130,246,0.28)] bg-[rgba(239,246,255,0.96)] text-[var(--ink)]';
+        return 'toast-info';
       default:
-        return 'border-[rgba(5,150,105,0.3)] bg-[rgba(236,253,245,0.96)] text-[var(--ink)]';
+        return 'toast-success';
     }
   };
 
@@ -39,7 +39,7 @@ export default function Toast({ message, type = 'success', duration = 3000, onCl
     <div
       role="status"
       aria-live="polite"
-      className={`w-full rounded-lg border px-4 py-2.5 text-sm font-medium shadow-[0_10px_28px_rgba(15,23,42,0.14)] backdrop-blur transition-all duration-200 ${
+      className={`app-toast w-full rounded-lg border px-4 py-2.5 text-sm font-medium shadow-[0_10px_28px_rgba(15,23,42,0.14)] backdrop-blur transition-all duration-200 ${
         visible ? 'translate-y-0 opacity-100' : 'translate-y-1 opacity-0'
       } ${getTypeStyles()}`}
     >

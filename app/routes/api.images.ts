@@ -1,7 +1,7 @@
 import type { Route } from './+types/api.images';
 
 import { parseDeleteKeys, parseImageListQuery } from '~/lib/images-api';
-import { copyImagesToGallery, deleteImages, listImages } from '~/lib/r2.server';
+import { deleteImages, listImages, moveImagesToGallery } from '~/lib/r2.server';
 import { ensureAuthenticatedApiRequest } from '~/lib/session.server';
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -69,14 +69,14 @@ export async function action({ request }: Route.ActionArgs) {
           : [];
       const keys = rawKeys.filter((key): key is string => typeof key === 'string');
 
-      if (payload?.action !== 'copy-to-gallery' || keys.length === 0) {
+      if (payload?.action !== 'move-to-gallery' || keys.length === 0) {
         return Response.json(
-          { error: 'Invalid copy request' },
+          { error: 'Invalid move request' },
           { status: 400, headers: { 'Cache-Control': 'no-store' } }
         );
       }
 
-      const result = await copyImagesToGallery(keys);
+      const result = await moveImagesToGallery(keys);
       return Response.json(
         { success: result.failed.length === 0, ...result },
         { headers: { 'Cache-Control': 'no-store' } }
@@ -112,10 +112,10 @@ export async function action({ request }: Route.ActionArgs) {
       }
     );
   } catch (error) {
-    console.error('Delete image error:', error);
+    console.error('Image action error:', error);
     return Response.json(
       {
-        error: 'Failed to delete image',
+        error: request.method === 'POST' ? 'Failed to move image' : 'Failed to delete image',
         details: error instanceof Error ? error.message : 'Unknown error',
       },
       {

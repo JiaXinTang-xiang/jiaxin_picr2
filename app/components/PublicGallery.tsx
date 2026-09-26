@@ -99,22 +99,38 @@ export default function PublicGallery() {
     void load();
   }, []);
 
-  useEffect(() => {
-    if (!activeImage && !albumMenuOpen) return;
-    const close = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setActiveImage(null);
-        setAlbumMenuOpen(false);
-      }
-    };
-    document.addEventListener('keydown', close);
-    return () => document.removeEventListener('keydown', close);
-  }, [activeImage, albumMenuOpen]);
-
   const visibleImages = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return normalized ? images.filter((image) => image.key.toLowerCase().includes(normalized)) : images;
   }, [images, query]);
+
+  const activeImageIndex = activeImage
+    ? visibleImages.findIndex((image) => image.key === activeImage.key)
+    : -1;
+  const navigateActiveImage = (direction: -1 | 1) => {
+    if (visibleImages.length < 2) return;
+    const currentIndex = activeImageIndex >= 0 ? activeImageIndex : 0;
+    const nextIndex = (currentIndex + direction + visibleImages.length) % visibleImages.length;
+    setActiveImage(visibleImages[nextIndex]);
+  };
+
+  useEffect(() => {
+    if (!activeImage && !albumMenuOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setActiveImage(null);
+        setAlbumMenuOpen(false);
+      } else if (activeImage && (event.key === 'ArrowLeft' || event.key === 'ArrowUp')) {
+        event.preventDefault();
+        navigateActiveImage(-1);
+      } else if (activeImage && (event.key === 'ArrowRight' || event.key === 'ArrowDown')) {
+        event.preventDefault();
+        navigateActiveImage(1);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [activeImage, albumMenuOpen, visibleImages]);
 
   const activeAlbum = albums.find((album) => album.prefix === albumFilter);
   const selectAlbum = (prefix: string) => {
@@ -216,7 +232,30 @@ export default function PublicGallery() {
         <div className="lopic-fullscreen-modal" onClick={() => setActiveImage(null)}>
           <section className="lopic-modal-content" onClick={(event) => event.stopPropagation()} aria-label="图片详情">
             <button type="button" className="lopic-modal-close" onClick={() => setActiveImage(null)} aria-label="关闭详情">×</button>
-            <div className="lopic-modal-image-wrap"><img src={activeImage.url} alt={fileName(activeImage.key)} /></div>
+            <div className="lopic-modal-image-wrap">
+              <img src={activeImage.url} alt={fileName(activeImage.key)} />
+              <button
+                type="button"
+                className="lopic-modal-nav lopic-modal-nav-prev"
+                onClick={() => navigateActiveImage(-1)}
+                disabled={visibleImages.length < 2}
+                aria-label="上一张图片"
+                title="上一张图片"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                className="lopic-modal-nav lopic-modal-nav-next"
+                onClick={() => navigateActiveImage(1)}
+                disabled={visibleImages.length < 2}
+                aria-label="下一张图片"
+                title="下一张图片"
+              >
+                ›
+              </button>
+              <span className="lopic-modal-counter">{activeImageIndex + 1} / {visibleImages.length}</span>
+            </div>
             <aside className="lopic-modal-info">
               <p className="lopic-gallery-kicker">PUBLIC IMAGE</p>
               <h2>{fileName(activeImage.key)}</h2>
