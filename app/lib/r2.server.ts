@@ -37,6 +37,13 @@ export interface DeleteImagesResult {
   }>;
 }
 
+export interface VirtualAlbumInfo {
+  name: string;
+  prefix: string;
+  count: number;
+  cover: ImageInfo | null;
+}
+
 export interface CopyToGalleryResult {
   copied: Array<{ source: string; target: string; url: string }>;
   skipped: Array<{ source: string; reason: string }>;
@@ -181,6 +188,39 @@ async function deleteImage(key: string) {
       Key: key,
     })
   );
+}
+
+export async function listVirtualAlbums(rootPrefix = 'gallery/'): Promise<VirtualAlbumInfo[]> {
+  const normalizedRoot = rootPrefix.endsWith('/') ? rootPrefix : `${rootPrefix}/`;
+  const collected: ImageInfo[] = [];
+  let cursor: string | null = null;
+
+  do {
+    const result = await listImages(normalizedRoot, 1000, cursor);
+    collected.push(...result.images);
+    cursor = result.nextCursor;
+  } while (cursor);
+
+  const albums = new Map<string, VirtualAlbumInfo>();
+  for (const image of collected) {
+    const relativeKey = image.key.slice(normalizedRoot.length);
+    const slashIndex = relativeKey.indexOf('/');
+    const prefix = slashIndex >= 0
+      ? `${normalizedRoot}${relativeKey.slice(0, slashIndex)}/`
+      : normalizedRoot;
+    const name = prefix === normalizedRoot ? '根目录' : prefix.slice(normalizedRoot.length, -1);
+    const existing = albums.get(prefix);
+    if (existing) {
+      existing.count += 1;
+      if (!existing.cover || image.uploadedAt < existing.cover.uploadedAt) {
+        existing.cover = image;
+      }
+    } else {
+      albums.set(prefix, { name, prefix, count: 1, cover: image });
+    }
+  }
+
+  return [...albums.values()].sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
 }
 
 function encodeCopySource(bucket: string, key: string): string {

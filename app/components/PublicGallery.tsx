@@ -19,6 +19,20 @@ interface PublicResponse {
   pagination?: { nextCursor: string | null; hasMore: boolean };
 }
 
+interface VirtualAlbum {
+  name: string;
+  prefix: string;
+  count: number;
+  cover: PublicImage | null;
+}
+
+interface AlbumsResponse {
+  success: boolean;
+  data?: VirtualAlbum[];
+  error?: string;
+  details?: string;
+}
+
 const formatSize = (bytes: number) => bytes < 1024
   ? `${bytes} B`
   : bytes < 1024 * 1024
@@ -36,13 +50,17 @@ export default function PublicGallery() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [activeImage, setActiveImage] = useState<PublicImage | null>(null);
   const [query, setQuery] = useState('');
+  const [albumFilter, setAlbumFilter] = useState('');
+  const [albums, setAlbums] = useState<VirtualAlbum[]>([]);
+  const [albumsLoading, setAlbumsLoading] = useState(true);
   const { toasts, removeToast } = useToast();
 
-  const load = async (cursor?: string | null, append = false) => {
+  const load = async (cursor?: string | null, append = false, requestedAlbum = albumFilter) => {
     try {
       setLoading(true);
       const params = new URLSearchParams({ limit: '48' });
       if (cursor) params.set('cursor', cursor);
+      if (requestedAlbum) params.set('prefix', requestedAlbum);
       const response = await fetch(`/api/gallery?${params}`);
       const result = (await response.json().catch(() => ({}))) as PublicResponse;
       if (!response.ok || !result.success || !result.data) {
@@ -58,7 +76,26 @@ export default function PublicGallery() {
     }
   };
 
-  useEffect(() => { void load(); }, []);
+  const loadAlbums = async () => {
+    try {
+      setAlbumsLoading(true);
+      const response = await fetch('/api/gallery?mode=albums');
+      const result = (await response.json().catch(() => ({}))) as AlbumsResponse;
+      if (!response.ok || !result.success || !result.data) {
+        throw new Error(result.error || result.details || '相册列表暂时不可用');
+      }
+      setAlbums(result.data);
+    } catch (reason) {
+      console.error('加载公开相册失败:', reason);
+    } finally {
+      setAlbumsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadAlbums();
+    void load();
+  }, []);
   useEffect(() => {
     if (!activeImage) return;
     const close = (event: KeyboardEvent) => {
@@ -72,6 +109,14 @@ export default function PublicGallery() {
     const normalized = query.trim().toLowerCase();
     return normalized ? images.filter((image) => image.key.toLowerCase().includes(normalized)) : images;
   }, [images, query]);
+
+  const activeAlbum = albums.find((album) => album.prefix === albumFilter);
+  const selectAlbum = (prefix: string) => {
+    setAlbumFilter(prefix);
+    setImages([]);
+    setNextCursor(null);
+    void load(null, false, prefix);
+  };
 
   return (
     <div className="public-page gallery-page">
@@ -89,7 +134,26 @@ export default function PublicGallery() {
 
       <section className="gallery-toolbar">
         <div className="search-field"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索文件名" /></div>
-        <div className="gallery-count">{visibleImages.length} 张可见图片</div>
+        <div className="gallery-count">{visibleImages.length} 张可见图片{activeAlbum ? ` · ${activeAlbum.name}` : ''}</div>
+      </section>
+
+      <section className="gallery-album-strip" aria-label="公开相册">
+        <div className="gallery-album-strip-heading">
+          <div><p className="eyebrow accent-eyebrow">VIRTUAL ALBUMS</p><h2>按相册浏览</h2></div>
+          <span>{albumsLoading ? '读取中…' : `${albums.length} 个目录`}</span>
+        </div>
+        <div className="gallery-album-list">
+          <button type="button" className={`gallery-album-card ${!albumFilter ? 'is-active' : ''}`} onClick={() => selectAlbum('')}>
+            <span className="gallery-album-cover gallery-album-cover-all">全部</span>
+            <span><strong>全部图片</strong><small>{albums.reduce((sum, album) => sum + album.count, 0)} 张</small></span>
+          </button>
+          {albums.map((album) => (
+            <button type="button" key={album.prefix} className={`gallery-album-card ${albumFilter === album.prefix ? 'is-active' : ''}`} onClick={() => selectAlbum(album.prefix)}>
+              <span className="gallery-album-cover">{album.cover ? <img src={album.cover.url} alt="" loading="lazy" /> : null}</span>
+              <span><strong>{album.name}</strong><small>{album.count} 张</small></span>
+            </button>
+          ))}
+        </div>
       </section>
 
       {loading && images.length === 0 ? (
@@ -97,7 +161,7 @@ export default function PublicGallery() {
       ) : error ? (
         <div className="empty-state"><img src="/brand/avatar.png" alt="" /><h2>画廊暂时离线</h2><p>{error}</p><button className="button-primary" onClick={() => void load()}>重新加载</button></div>
       ) : visibleImages.length === 0 ? (
-        <div className="empty-state"><img src="/brand/avatar.png" alt="" /><h2>还没有公开图片</h2><p>登录管理台后，把图片上传到 gallery/ 目录即可在这里展示。</p><Link to="/login" className="button-primary">进入管理台</Link></div>
+        <div className="empty-state"><img src="/brand/avatar.png" alt="" /><h2>{activeAlbum ? '这个相册还没有图片' : '还没有公开图片'}</h2><p>{activeAlbum ? '请选择其他虚拟相册，或回到全部图片。' : '登录管理台后，把图片上传到 gallery/ 目录即可在这里展示。'}</p><Link to="/login" className="button-primary">进入管理台</Link></div>
       ) : (
         <div className="public-gallery-grid">
           {visibleImages.map((image, index) => (

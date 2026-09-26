@@ -139,6 +139,8 @@ export default function ImageGallery() {
   const [prefixFilter, setPrefixFilter] = useState('');
   const [formatFilter, setFormatFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+  const [publishedKeys, setPublishedKeys] = useState<Set<string>>(new Set());
+  const [copyingKeys, setCopyingKeys] = useState<Set<string>>(new Set());
   const { toasts, removeToast, showSuccess, showError, showInfo } = useToast();
 
   const currentCursor = cursorHistory[pageIndex] ?? null;
@@ -369,6 +371,7 @@ export default function ImageGallery() {
 
     try {
       setActionLoading(true);
+      setCopyingKeys(new Set(uniqueKeys));
       const response = await fetch('/api/images', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -390,6 +393,7 @@ export default function ImageGallery() {
       const skippedCount = result.skipped?.length || 0;
       const failedCount = result.failed?.length || 0;
       if (copiedCount > 0) {
+        setPublishedKeys((previous) => new Set([...previous, ...(result.copied || []).map((item) => item.source)]));
         showSuccess(copiedCount === 1 ? '已复制到公开画廊' : `已复制 ${copiedCount} 张到公开画廊`);
       }
       if (skippedCount > 0) {
@@ -403,6 +407,7 @@ export default function ImageGallery() {
       showError('发布失败: 网络错误');
     } finally {
       setActionLoading(false);
+      setCopyingKeys(new Set());
     }
   };
 
@@ -500,6 +505,18 @@ export default function ImageGallery() {
   };
 
   const normalizedSearch = searchQuery.trim().toLowerCase();
+  const virtualAlbums = useMemo(() => {
+    const albums = new Map<string, { prefix: string; name: string; count: number }>();
+    for (const image of images) {
+      const slashIndex = image.key.indexOf('/');
+      const prefix = slashIndex >= 0 ? image.key.slice(0, slashIndex + 1) : '';
+      const name = prefix ? prefix.slice(0, -1) : '根目录';
+      const existing = albums.get(prefix);
+      if (existing) existing.count += 1;
+      else albums.set(prefix, { prefix, name, count: 1 });
+    }
+    return [...albums.values()].sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
+  }, [images]);
   const visibleImages = useMemo(() => {
     const now = Date.now();
     const dateThreshold = dateFilter === 'today'
@@ -658,6 +675,16 @@ export default function ImageGallery() {
               <p className="text-xs leading-5 text-[var(--muted)]">
                 目录前缀就是虚拟相册，不新增数据库；输入前缀即可查看对应目录下的图片。
               </p>
+              {virtualAlbums.length > 0 ? (
+                <div className="flex flex-wrap gap-2" aria-label="虚拟相册快捷筛选">
+                  <button type="button" onClick={() => changePrefixFilter('')} className={getToggleButtonClass(!prefixFilter)}>全部目录</button>
+                  {virtualAlbums.map((album) => (
+                    <button type="button" key={album.prefix} onClick={() => changePrefixFilter(album.prefix)} className={getToggleButtonClass(prefixFilter === album.prefix)}>
+                      {album.name} <span className="ml-1 text-[11px] opacity-70">{album.count}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
               <div className="grid gap-2 sm:grid-cols-2">
                 <label className="grid gap-1.5 text-xs font-semibold text-[var(--ink-soft)]">
                   图片格式
@@ -893,6 +920,7 @@ export default function ImageGallery() {
                       >
                         {getDisplayStem(image.key)}
                       </h3>
+                      {(image.key.startsWith('gallery/') || publishedKeys.has(image.key)) ? <span className="mt-2 inline-flex w-fit rounded-full bg-[rgba(95,159,213,.2)] px-2 py-1 text-[10px] font-semibold text-[var(--accent-strong)]">已公开</span> : null}
                     </div>
                   </div>
                 </div>
@@ -926,7 +954,7 @@ export default function ImageGallery() {
                   </div>
 
                       <button type="button" onClick={() => setActiveImage(image)} className="gallery-detail-link">查看图片详情 <span aria-hidden="true">→</span></button>
-                  <button type="button" onClick={() => void copyToGallery([image.key])} className="gallery-detail-link">复制到公开画廊 <span aria-hidden="true">↗</span></button>
+                  <button type="button" onClick={() => void copyToGallery([image.key])} disabled={copyingKeys.has(image.key) || image.key.startsWith('gallery/')} className="gallery-detail-link disabled:cursor-not-allowed disabled:opacity-50">{copyingKeys.has(image.key) ? '正在发布…' : image.key.startsWith('gallery/') || publishedKeys.has(image.key) ? '已发布到公开画廊' : '复制到公开画廊'} <span aria-hidden="true">↗</span></button>
                 </div>
               </article>
             ))}
@@ -1024,7 +1052,7 @@ export default function ImageGallery() {
                     <div className="grid grid-cols-2 gap-2 xl:w-[9rem]">
                       <button type="button" onClick={() => void copyToClipboard(image.url, '直链')} className={getActionButtonClass('secondary')} title="复制直链">⧉</button>
                       <button type="button" onClick={() => setActiveImage(image)} className={getActionButtonClass('ghost')} title="图片详情">详情</button>
-                      <button type="button" onClick={() => void copyToGallery([image.key])} className={getActionButtonClass('secondary')} title="复制到公开画廊">画廊</button>
+                      <button type="button" onClick={() => void copyToGallery([image.key])} disabled={copyingKeys.has(image.key) || image.key.startsWith('gallery/')} className={getActionButtonClass('secondary')} title="复制到公开画廊">{image.key.startsWith('gallery/') || publishedKeys.has(image.key) ? '已公开' : '画廊'}</button>
                     </div>
                   </div>
                 </article>

@@ -192,6 +192,19 @@ html.theme-dark .login-art { background: var(--surface-strong); }
 .search-field { display: flex; align-items: center; gap: 8px; width: min(380px, 100%); padding: 0 13px; border: 1px solid var(--line); border-radius: 11px; background: #fff; color: var(--muted); }
 .search-field input { width: 100%; border: 0; outline: 0; padding: 11px 0; color: var(--ink); background: transparent; }
 .gallery-count { padding: 0 12px; color: var(--muted); font-size: .78rem; font-weight: 700; }
+.gallery-album-strip { display: grid; gap: 14px; }
+.gallery-album-strip-heading { display: flex; align-items: end; justify-content: space-between; gap: 16px; }
+.gallery-album-strip-heading h2 { margin-top: 5px; color: var(--ink); font-family: var(--font-display); font-size: 1.7rem; }
+.gallery-album-strip-heading > span { color: var(--muted); font-size: .75rem; font-weight: 700; }
+.gallery-album-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.gallery-album-card { display: flex; align-items: center; gap: 11px; min-width: 0; padding: 9px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper-strong); color: var(--ink); text-align: left; cursor: pointer; transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease; }
+.gallery-album-card:hover, .gallery-album-card.is-active { border-color: rgba(95,159,213,.55); box-shadow: 0 10px 24px rgba(57,91,120,.1); transform: translateY(-1px); }
+.gallery-album-card > span:last-child { display: grid; min-width: 0; gap: 3px; }
+.gallery-album-card strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .84rem; }
+.gallery-album-card small { color: var(--muted); font-size: .7rem; }
+.gallery-album-cover { display: grid; flex: 0 0 48px; place-items: center; width: 48px; height: 48px; overflow: hidden; border-radius: 10px; background: var(--surface); color: var(--accent-strong); font-size: .68rem; font-weight: 800; }
+.gallery-album-cover img { width: 100%; height: 100%; object-fit: cover; }
+.gallery-album-cover-all { border: 1px solid rgba(95,159,213,.25); background: var(--accent-soft); }
 .public-gallery-grid { columns: 4 220px; column-gap: 15px; }
 .public-image-card { break-inside: avoid; margin: 0 0 15px; overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: rgba(255,255,255,.78); box-shadow: 0 13px 30px rgba(51,86,116,.05); }
 .public-image-frame { position: relative; display: block; width: 100%; min-height: 180px; padding: 0; border: 0; background: var(--surface-strong); cursor: pointer; }
