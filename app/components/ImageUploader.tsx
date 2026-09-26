@@ -34,8 +34,9 @@ interface PreviewImage {
   compressedFile?: File;
   isProcessing: boolean;
   relativePath: string;
-  uploadStatus?: 'idle' | 'uploading' | 'error';
+  uploadStatus?: 'idle' | 'uploading' | 'success' | 'error';
   uploadError?: string;
+  uploadedResult?: UploadedImage;
 }
 
 type NamingStrategy = 'preserve' | 'hash-suffix' | 'random';
@@ -382,9 +383,12 @@ export default function ImageUploader() {
     setIsUploading(true);
 
     try {
-      const snapshots = [...previewImagesRef.current];
+      const snapshots = previewImagesRef.current.filter((image) => image.uploadStatus !== 'success');
+      const snapshotIds = new Set(snapshots.map((image) => image.id));
       setPreviewImages((prev) =>
-        prev.map((image) => ({ ...image, uploadStatus: 'uploading', uploadError: undefined }))
+        prev.map((image) => snapshotIds.has(image.id)
+          ? { ...image, uploadStatus: 'uploading', uploadError: undefined }
+          : image)
       );
       const results = await mapWithConcurrency(
         snapshots,
@@ -414,6 +418,7 @@ export default function ImageUploader() {
 
       const successfulIds = new Set<string>();
       const nextUploadedImages: UploadedImage[] = [];
+      const uploadedById = new Map<string, UploadedImage>();
       const failedFiles: string[] = [];
       const failedById = new Map<string, string>();
 
@@ -421,6 +426,7 @@ export default function ImageUploader() {
         if (item.result?.success && item.result.data) {
           successfulIds.add(item.id);
           nextUploadedImages.push(item.result.data);
+          uploadedById.set(item.id, item.result.data);
           return;
         }
 
@@ -447,13 +453,11 @@ export default function ImageUploader() {
       }
 
       if (successfulIds.size > 0) {
-        setPreviewImages((prev) => {
-          const remaining = prev.filter((image) => !successfulIds.has(image.id));
-          prev
-            .filter((image) => successfulIds.has(image.id))
-            .forEach(revokePreviewUrls);
-          return remaining;
-        });
+        setPreviewImages((prev) => prev.map((image) =>
+          successfulIds.has(image.id)
+            ? { ...image, uploadStatus: 'success', uploadError: undefined, uploadedResult: uploadedById.get(image.id) }
+            : image
+        ));
       }
 
       if (failedById.size > 0) {
@@ -487,11 +491,9 @@ export default function ImageUploader() {
       const result = await uploadFile(fileToUpload, image.relativePath);
       if (!result.success || !result.data) throw new Error(result.error || '上传失败');
       setUploadedImages((prev) => [result.data!, ...prev].slice(0, 12));
-      setPreviewImages((prev) => {
-        const remaining = prev.filter((item) => item.id !== id);
-        prev.filter((item) => item.id === id).forEach(revokePreviewUrls);
-        return remaining;
-      });
+      setPreviewImages((prev) => prev.map((item) => item.id === id
+        ? { ...item, uploadStatus: 'success', uploadError: undefined, uploadedResult: result.data }
+        : item));
       showSuccess('图片重试上传成功');
     } catch (error) {
       const message = error instanceof Error ? error.message : '上传失败';
@@ -583,7 +585,7 @@ export default function ImageUploader() {
     };
   }, [handlePaste]);
 
-  const copyToClipboard = async (text: string, label: '链接' | 'Markdown' = '链接') => {
+  const copyToClipboard = async (text: string, label = '内容') => {
     try {
       await navigator.clipboard.writeText(text);
       showSuccess(`已复制${label}`, 1800);
@@ -619,7 +621,7 @@ export default function ImageUploader() {
     return total + image.originalSize;
   }, 0);
   const canUpload =
-    previewImages.length > 0 &&
+    previewImages.some((image) => image.uploadStatus !== 'success') &&
     !isUploading &&
     previewImages.every((image) => !image.isProcessing);
   const recentCountLabel = uploadedImages.length > 0 ? `${uploadedImages.length} 条` : '暂无';
@@ -869,6 +871,9 @@ export default function ImageUploader() {
                         {previewImage.uploadStatus === 'uploading' ? (
                           <span className="text-[var(--accent-strong)]">上传中...</span>
                         ) : null}
+                        {previewImage.uploadStatus === 'success' ? (
+                          <span className="text-[var(--success)]">已上传</span>
+                        ) : null}
                         {previewImage.uploadStatus === 'error' ? (
                           <span className="text-[var(--danger)]" title={previewImage.uploadError}>上传失败：{previewImage.uploadError}</span>
                         ) : null}
@@ -882,6 +887,12 @@ export default function ImageUploader() {
                       >
                         重试
                       </button>
+                    ) : null}
+                    {previewImage.uploadStatus === 'success' && previewImage.uploadedResult ? (
+                      <div className="queue-result-actions">
+                        <button type="button" className="button-secondary px-2 py-1 text-xs" onClick={() => void copyToClipboard(previewImage.uploadedResult!.url, '直链')}>复制直链</button>
+                        <button type="button" className="button-ghost px-2 py-1 text-xs" onClick={() => void copyToClipboard(`![${previewImage.file.name}](${previewImage.uploadedResult!.url})`, 'Markdown')}>Markdown</button>
+                      </div>
                     ) : null}
                     <button
                       onClick={() => void removePreviewImage(previewImage.id)}

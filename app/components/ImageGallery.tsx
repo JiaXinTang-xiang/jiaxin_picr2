@@ -688,7 +688,7 @@ export default function ImageGallery() {
                 </div>
               </div>
 
-              <div className="control-card">
+              <div className={`control-card ${selectedImages.size > 0 ? 'bulk-action-active' : ''}`}>
                 <div className="mb-2 flex items-center justify-between px-3">
                   <p className="eyebrow text-[var(--muted)]">操作</p>
                   <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
@@ -787,6 +787,11 @@ export default function ImageGallery() {
                       className="h-4 w-4 rounded border-[var(--line-strong)] bg-[var(--paper)] text-[var(--accent)] focus:ring-[rgba(86,109,90,0.24)]"
                     />
                   </div>
+                  <div className="gallery-card-actions" aria-label={`${getDisplayName(image.key)}快捷操作`}>
+                    <button type="button" title="预览图片" aria-label="预览图片" onClick={() => setActiveImage(image)}>↗</button>
+                    <button type="button" title="复制直链" aria-label="复制直链" onClick={() => void copyToClipboard(image.url, '直链')}>⧉</button>
+                    <button type="button" title="删除图片" aria-label="删除图片" onClick={() => void deleteImage(image.key)}>×</button>
+                  </div>
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[rgba(24,28,24,0.84)] via-[rgba(24,28,24,0.36)] to-transparent px-4 pb-4 pt-12">
                     <div className="min-w-0">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[rgba(252,248,241,0.72)]">
@@ -830,27 +835,7 @@ export default function ImageGallery() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-[1fr_0.78fr_0.84fr] gap-2">
-                    <button
-                      onClick={() => void copyToClipboard(image.url, '链接')}
-                      className={getActionButtonClass('secondary')}
-                    >
-                      复制
-                    </button>
-                    <button
-                      onClick={() => void copyToClipboard(`![Image](${image.url})`, 'Markdown')}
-                      className={getActionButtonClass('ghost')}
-                      title="复制 Markdown"
-                    >
-                      Markdown
-                    </button>
-                    <button
-                      onClick={() => void deleteImage(image.key)}
-                      className={getActionButtonClass('danger')}
-                    >
-                      删除
-                    </button>
-                  </div>
+                  <button type="button" onClick={() => setActiveImage(image)} className="gallery-detail-link">查看图片详情 <span aria-hidden="true">→</span></button>
                 </div>
               </article>
             ))}
@@ -940,26 +925,9 @@ export default function ImageGallery() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2 xl:w-[13.5rem]">
-                      <button
-                        onClick={() => void copyToClipboard(image.url, '链接')}
-                        className={getActionButtonClass('secondary')}
-                      >
-                        复制
-                      </button>
-                      <button
-                        onClick={() => void copyToClipboard(`![Image](${image.url})`, 'Markdown')}
-                        className={getActionButtonClass('ghost')}
-                        title="复制 Markdown"
-                      >
-                        Markdown
-                      </button>
-                      <button
-                        onClick={() => void deleteImage(image.key)}
-                        className={getActionButtonClass('danger')}
-                      >
-                        删除
-                      </button>
+                    <div className="grid grid-cols-2 gap-2 xl:w-[9rem]">
+                      <button type="button" onClick={() => void copyToClipboard(image.url, '直链')} className={getActionButtonClass('secondary')} title="复制直链">⧉</button>
+                      <button type="button" onClick={() => setActiveImage(image)} className={getActionButtonClass('ghost')} title="图片详情">详情</button>
                     </div>
                   </div>
                 </article>
