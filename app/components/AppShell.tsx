@@ -50,7 +50,7 @@ export default function AppShell({ authenticated = false, children }: AppShellPr
           : '/';
 
   return (
-    <div className="site-shell">
+    <div className={`site-shell ${currentPath === '/gallery' ? 'gallery-site-shell' : ''}`}>
       <header className="site-header">
         <div className="site-header-inner">
           <Link to={authenticated ? '/manage' : '/'} className="brand-lockup">

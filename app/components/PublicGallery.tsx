@@ -39,6 +39,8 @@ const formatSize = (bytes: number) => bytes < 1024
     ? `${(bytes / 1024).toFixed(1)} KB`
     : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 const fileName = (key: string) => key.split('/').pop() || key;
+const fileStem = (key: string) => fileName(key).replace(/\.[^.]+$/, '');
+const formatLabel = (mimeType: string) => mimeType.replace('image/', '').toUpperCase();
 const dateLabel = (value: string) => new Intl.DateTimeFormat('zh-CN', {
   year: 'numeric', month: 'short', day: 'numeric',
 }).format(new Date(value));
@@ -53,7 +55,8 @@ export default function PublicGallery() {
   const [albumFilter, setAlbumFilter] = useState('');
   const [albums, setAlbums] = useState<VirtualAlbum[]>([]);
   const [albumsLoading, setAlbumsLoading] = useState(true);
-  const { toasts, removeToast } = useToast();
+  const [albumMenuOpen, setAlbumMenuOpen] = useState(false);
+  const { toasts, removeToast, showSuccess, showError } = useToast();
 
   const load = async (cursor?: string | null, append = false, requestedAlbum = albumFilter) => {
     try {
@@ -96,14 +99,18 @@ export default function PublicGallery() {
     void loadAlbums();
     void load();
   }, []);
+
   useEffect(() => {
-    if (!activeImage) return;
+    if (!activeImage && !albumMenuOpen) return;
     const close = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setActiveImage(null);
+      if (event.key === 'Escape') {
+        setActiveImage(null);
+        setAlbumMenuOpen(false);
+      }
     };
     document.addEventListener('keydown', close);
     return () => document.removeEventListener('keydown', close);
-  }, [activeImage]);
+  }, [activeImage, albumMenuOpen]);
 
   const visibleImages = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -113,93 +120,118 @@ export default function PublicGallery() {
   const activeAlbum = albums.find((album) => album.prefix === albumFilter);
   const selectAlbum = (prefix: string) => {
     setAlbumFilter(prefix);
+    setAlbumMenuOpen(false);
     setImages([]);
     setNextCursor(null);
     void load(null, false, prefix);
   };
 
+  const copyLink = async (image: PublicImage) => {
+    try {
+      await navigator.clipboard.writeText(image.url);
+      showSuccess('已复制图片直链', 1800);
+    } catch {
+      showError('复制失败，请手动复制图片地址');
+    }
+  };
+
+  const albumCount = albums.reduce((sum, album) => sum + album.count, 0);
+
   return (
-    <div className="public-page gallery-page">
-      <section className="gallery-heading">
-        <div>
-          <p className="eyebrow accent-eyebrow">PUBLIC / GALLERY</p>
-          <h1 className="section-title">公开画廊</h1>
-          <p className="section-description">这里收录了 gallery/ 目录下愿意被看见的图片。</p>
-        </div>
-        <div className="gallery-heading-actions">
-          <Link to="/" className="button-secondary">返回首页</Link>
-          <Link to="/login" className="button-primary">管理登录</Link>
-        </div>
-      </section>
+    <div className="lopic-gallery">
+      <header className="lopic-gallery-topbar">
+        <Link to="/" className="lopic-gallery-logo" aria-label="返回 Lightframe 首页">LIGHTFRAME</Link>
 
-      <section className="gallery-toolbar">
-        <div className="search-field"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索文件名" /></div>
-        <div className="gallery-count">{visibleImages.length} 张可见图片{activeAlbum ? ` · ${activeAlbum.name}` : ''}</div>
-      </section>
-
-      <section className="gallery-album-strip" aria-label="公开相册">
-        <div className="gallery-album-strip-heading">
-          <div><p className="eyebrow accent-eyebrow">VIRTUAL ALBUMS</p><h2>按相册浏览</h2></div>
-          <span>{albumsLoading ? '读取中…' : `${albums.length} 个目录`}</span>
-        </div>
-        <div className="gallery-album-list">
-          <button type="button" className={`gallery-album-card ${!albumFilter ? 'is-active' : ''}`} onClick={() => selectAlbum('')}>
-            <span className="gallery-album-cover gallery-album-cover-all">全部</span>
-            <span><strong>全部图片</strong><small>{albums.reduce((sum, album) => sum + album.count, 0)} 张</small></span>
-          </button>
-          {albums.map((album) => (
-            <button type="button" key={album.prefix} className={`gallery-album-card ${albumFilter === album.prefix ? 'is-active' : ''}`} onClick={() => selectAlbum(album.prefix)}>
-              <span className="gallery-album-cover">{album.cover ? <img src={album.cover.url} alt="" loading="lazy" /> : null}</span>
-              <span><strong>{album.name}</strong><small>{album.count} 张</small></span>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {loading && images.length === 0 ? (
-        <div className="empty-state"><div className="loader-dot" /><p>正在打开画廊…</p></div>
-      ) : error ? (
-        <div className="empty-state"><img src="/brand/avatar.png" alt="" /><h2>画廊暂时离线</h2><p>{error}</p><button className="button-primary" onClick={() => void load()}>重新加载</button></div>
-      ) : visibleImages.length === 0 ? (
-        <div className="empty-state"><img src="/brand/avatar.png" alt="" /><h2>{activeAlbum ? '这个相册还没有图片' : '还没有公开图片'}</h2><p>{activeAlbum ? '请选择其他虚拟相册，或回到全部图片。' : '登录管理台后，把图片上传到 gallery/ 目录即可在这里展示。'}</p><Link to="/login" className="button-primary">进入管理台</Link></div>
-      ) : (
-        <div className="public-gallery-grid">
-          {visibleImages.map((image, index) => (
-            <article className="public-image-card" key={image.key}>
-              <button className="public-image-frame" onClick={() => setActiveImage(image)} aria-label={`查看 ${fileName(image.key)}`}>
-                <img src={image.url} alt={fileName(image.key)} loading={index < 8 ? 'eager' : 'lazy'} />
-                <span className="image-hover-label">查看详情 ↗</span>
+        <div className="lopic-gallery-console">
+          <div className="lopic-gallery-console-inner">
+            <div className="lopic-album-picker">
+              <button type="button" className="lopic-album-toggle" onClick={() => setAlbumMenuOpen((open) => !open)} aria-expanded={albumMenuOpen}>
+                <span>{activeAlbum?.name || '全部图片'}</span><span className="lopic-chevron">⌄</span>
               </button>
-              <div className="public-image-meta">
-                <div><h2 title={fileName(image.key)}>{fileName(image.key)}</h2><p>{dateLabel(image.uploadedAt)} · {formatSize(image.size)}</p></div>
-                <span className="public-image-format">{image.mimeType.replace('image/', '').toUpperCase()}</span>
-              </div>
-            </article>
-          ))}
+              {albumMenuOpen ? (
+                <div className="lopic-album-menu">
+                  <button type="button" className={!albumFilter ? 'is-active' : ''} onClick={() => selectAlbum('')}>全部图片 <span>{albumCount}</span></button>
+                  {albums.map((album) => (
+                    <button type="button" key={album.prefix} className={albumFilter === album.prefix ? 'is-active' : ''} onClick={() => selectAlbum(album.prefix)}>
+                      {album.name} <span>{album.count}</span>
+                    </button>
+                  ))}
+                  {albumsLoading ? <p>读取相册中…</p> : null}
+                </div>
+              ) : null}
+            </div>
+            <div className="lopic-gallery-search">
+              <span aria-hidden="true">⌕</span>
+              <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索文件名" />
+              {query ? <button type="button" onClick={() => setQuery('')} aria-label="清空搜索">×</button> : null}
+            </div>
+          </div>
         </div>
-      )}
 
-      {!loading && !error && nextCursor ? <div className="load-more"><button className="button-secondary" onClick={() => void load(nextCursor, true)}>加载更多</button></div> : null}
+        <div className="lopic-gallery-actions">
+          <span className="lopic-gallery-total">{visibleImages.length} / {albumCount || images.length}</span>
+          <Link to="/login" className="lopic-gallery-login">管理</Link>
+        </div>
+      </header>
+
+      <main className="lopic-gallery-content">
+        <div className="lopic-gallery-heading">
+          <div>
+            <p className="lopic-gallery-kicker">PUBLIC COLLECTION / {activeAlbum?.name || 'ALL IMAGES'}</p>
+            <h1>{activeAlbum?.name || 'Lightframe Gallery'}</h1>
+          </div>
+          <p className="lopic-gallery-subtitle">游客浏览模式 · {activeAlbum ? `${activeAlbum.count} 张图片` : '按目录整理的公开图片'}</p>
+        </div>
+
+        {loading && images.length === 0 ? (
+          <div className="lopic-gallery-state"><div className="lopic-spinner" /><p>正在打开画廊…</p></div>
+        ) : error ? (
+          <div className="lopic-gallery-state"><p>画廊暂时离线</p><small>{error}</small><button type="button" onClick={() => void load()} className="lopic-gallery-retry">重新加载</button></div>
+        ) : visibleImages.length === 0 ? (
+          <div className="lopic-gallery-state"><p>NO DATA</p><small>{activeAlbum ? '这个相册还没有匹配的图片。' : '还没有公开图片。'}</small></div>
+        ) : (
+          <div className="lopic-waterfall">
+            {visibleImages.map((image, index) => (
+              <article className="lopic-artwork-card" key={image.key} style={{ '--card-index': index } as React.CSSProperties}>
+                <button type="button" className="lopic-artwork-button" onClick={() => setActiveImage(image)} aria-label={`查看 ${fileName(image.key)}`}>
+                  <img src={image.url} alt={fileName(image.key)} loading={index < 8 ? 'eager' : 'lazy'} />
+                  <span className="lopic-card-glow" />
+                  <span className="lopic-artwork-overlay">
+                    <span className="lopic-artwork-meta"><strong>{fileStem(image.key)}</strong><small>{formatLabel(image.mimeType)} · {formatSize(image.size)}</small></span>
+                    <span className="lopic-artwork-open">↗</span>
+                  </span>
+                </button>
+              </article>
+            ))}
+          </div>
+        )}
+
+        {!loading && !error && nextCursor ? <div className="lopic-gallery-load-more"><button type="button" onClick={() => void load(nextCursor, true)}>加载更多 <span>↓</span></button></div> : null}
+        {!loading && !error && images.length > 0 && !nextCursor ? <p className="lopic-gallery-end">END OF COLLECTION</p> : null}
+      </main>
+
+      <footer className="lopic-gallery-footer"><span>LIGHTFRAME</span><i /> <span>PUBLIC ARCHIVE</span><i /> <span>{new Date().getFullYear()}</span></footer>
       <ToastManager toasts={toasts} removeToast={removeToast} />
 
       {activeImage ? (
-        <div className="gallery-lightbox fixed inset-0 z-[80] flex items-stretch justify-end backdrop-blur-sm" onClick={() => setActiveImage(null)}>
-          <section className="gallery-lightbox-inner image-detail-drawer-shell grid h-full w-full max-w-[560px] grid-cols-1 gap-0 overflow-y-auto border-l border-[var(--line)] bg-[var(--paper-strong)] shadow-[0_20px_80px_rgba(13,30,49,0.24)]" onClick={(event) => event.stopPropagation()} aria-label="图片详情">
-            <div className="gallery-lightbox-media flex min-h-[280px] items-center justify-center p-5">
-              <img src={activeImage.url} alt={fileName(activeImage.key)} className="max-h-[42vh] w-auto max-w-full rounded-[16px] object-contain shadow-[0_18px_50px_rgba(24,30,24,0.14)]" />
-            </div>
-            <aside className="gallery-lightbox-details flex flex-col gap-6 border-t border-[var(--line)] p-6 text-[var(--ink)]">
-              <div className="flex items-start justify-between gap-4">
-                <div><p className="eyebrow accent-eyebrow">公开图片</p><h2 className="mt-3 break-words text-2xl font-bold">{fileName(activeImage.key)}</h2></div>
-                <button type="button" onClick={() => setActiveImage(null)} className="icon-button" aria-label="关闭详情">×</button>
-              </div>
-              <p className="break-all rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 font-mono text-xs leading-6 text-[var(--ink-soft)]">{activeImage.key}</p>
-              <dl className="grid grid-cols-2 gap-3 text-sm">
-                <div className="detail-metric"><dt>文件大小</dt><dd>{formatSize(activeImage.size)}</dd></div>
-                <div className="detail-metric"><dt>图片格式</dt><dd>{activeImage.mimeType}</dd></div>
-                <div className="detail-metric col-span-2"><dt>上传时间</dt><dd>{new Intl.DateTimeFormat('zh-CN', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(activeImage.uploadedAt))}</dd></div>
+        <div className="lopic-fullscreen-modal" onClick={() => setActiveImage(null)}>
+          <section className="lopic-modal-content" onClick={(event) => event.stopPropagation()} aria-label="图片详情">
+            <button type="button" className="lopic-modal-close" onClick={() => setActiveImage(null)} aria-label="关闭详情">×</button>
+            <div className="lopic-modal-image-wrap"><img src={activeImage.url} alt={fileName(activeImage.key)} /></div>
+            <aside className="lopic-modal-info">
+              <p className="lopic-gallery-kicker">PUBLIC IMAGE</p>
+              <h2>{fileName(activeImage.key)}</h2>
+              <dl>
+                <div><dt>文件大小</dt><dd>{formatSize(activeImage.size)}</dd></div>
+                <div><dt>类型</dt><dd>{activeImage.mimeType}</dd></div>
+                <div><dt>上传时间</dt><dd>{dateLabel(activeImage.uploadedAt)}</dd></div>
+                <div><dt>所在目录</dt><dd>{activeImage.key.slice(0, activeImage.key.lastIndexOf('/') + 1) || '根目录'}</dd></div>
               </dl>
-              <p className="public-view-notice">游客浏览模式 · 管理操作仅对管理员开放</p>
+              <div className="lopic-modal-actions">
+                <button type="button" onClick={() => void copyLink(activeImage)}>复制直链</button>
+                <a href={activeImage.url} target="_blank" rel="noreferrer">查看原图 ↗</a>
+              </div>
+              <p className="lopic-modal-notice">游客浏览模式 · 管理操作仅对管理员开放</p>
             </aside>
           </section>
         </div>
