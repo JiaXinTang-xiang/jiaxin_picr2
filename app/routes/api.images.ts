@@ -1,7 +1,7 @@
 import type { Route } from './+types/api.images';
 
 import { parseDeleteKeys, parseImageListQuery } from '~/lib/images-api';
-import { deleteImages, listImages } from '~/lib/r2.server';
+import { copyImagesToGallery, deleteImages, listImages } from '~/lib/r2.server';
 import { ensureAuthenticatedApiRequest } from '~/lib/session.server';
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -52,14 +52,37 @@ export async function action({ request }: Route.ActionArgs) {
     return authError;
   }
 
-  if (request.method !== 'DELETE') {
+  if (request.method !== 'DELETE' && request.method !== 'POST') {
     return Response.json({ error: 'Method not allowed' }, { status: 405 });
   }
 
   try {
     const payload = (await request.json().catch(() => null)) as
-      | { key?: unknown; keys?: unknown }
+      | { key?: unknown; keys?: unknown; action?: unknown }
       | null;
+
+    if (request.method === 'POST') {
+      const rawKeys = Array.isArray(payload?.keys)
+        ? payload.keys
+        : payload?.key
+          ? [payload.key]
+          : [];
+      const keys = rawKeys.filter((key): key is string => typeof key === 'string');
+
+      if (payload?.action !== 'copy-to-gallery' || keys.length === 0) {
+        return Response.json(
+          { error: 'Invalid copy request' },
+          { status: 400, headers: { 'Cache-Control': 'no-store' } }
+        );
+      }
+
+      const result = await copyImagesToGallery(keys);
+      return Response.json(
+        { success: result.failed.length === 0, ...result },
+        { headers: { 'Cache-Control': 'no-store' } }
+      );
+    }
+
     const keys = parseDeleteKeys(payload);
 
     if (keys.length === 0) {

@@ -43,6 +43,14 @@ function getLoginPath(): string {
   return `/login?next=${encodeURIComponent('/manage/gallery')}`;
 }
 
+interface CopyToGalleryResponse {
+  success: boolean;
+  copied?: Array<{ source: string; target: string; url: string }>;
+  skipped?: Array<{ source: string; reason: string }>;
+  failed?: Array<{ source: string; error: string }>;
+  error?: string;
+}
+
 function getDisplayName(key: string): string {
   return key.split('/').pop() || key;
 }
@@ -346,6 +354,64 @@ export default function ImageGallery() {
     }
 
     await deleteImages(Array.from(selectedImages));
+  };
+
+  const copyToGallery = async (keys: string[]) => {
+    const uniqueKeys = [...new Set(keys.filter(Boolean))];
+    if (uniqueKeys.length === 0) {
+      showInfo('请先选择要发布的图片');
+      return;
+    }
+
+    if (!window.confirm(`将 ${uniqueKeys.length} 张图片复制到公开画廊？游客将可以看到副本。原图不会删除。`)) {
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      const response = await fetch('/api/images', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'copy-to-gallery', keys: uniqueKeys }),
+      });
+
+      if (response.status === 401) {
+        window.location.assign(getLoginPath());
+        return;
+      }
+
+      const result = (await response.json().catch(() => ({}))) as CopyToGalleryResponse;
+      if (!response.ok) {
+        showError(result.error || '发布到公开画廊失败');
+        return;
+      }
+
+      const copiedCount = result.copied?.length || 0;
+      const skippedCount = result.skipped?.length || 0;
+      const failedCount = result.failed?.length || 0;
+      if (copiedCount > 0) {
+        showSuccess(copiedCount === 1 ? '已复制到公开画廊' : `已复制 ${copiedCount} 张到公开画廊`);
+      }
+      if (skippedCount > 0) {
+        showInfo(`${skippedCount} 张已在公开画廊中`);
+      }
+      if (failedCount > 0) {
+        showError(`${failedCount} 张发布失败`);
+      }
+    } catch (err) {
+      console.error('复制到公开画廊失败:', err);
+      showError('发布失败: 网络错误');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleGalleryDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const key = event.dataTransfer.getData('text/plain');
+    if (key) {
+      void copyToGallery([key]);
+    }
   };
 
   const toggleImageSelection = (key: string) => {
@@ -688,6 +754,18 @@ export default function ImageGallery() {
                 </div>
               </div>
 
+              <div
+                className="control-card border-dashed border-[rgba(95,159,213,.4)] bg-[var(--accent-soft)]"
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={handleGalleryDrop}
+              >
+                <div className="mb-2 flex items-center justify-between px-3">
+                  <p className="eyebrow text-[var(--accent-strong)]">公开画廊投放区</p>
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">拖入单张图片</span>
+                </div>
+                <p className="px-3 text-sm leading-6 text-[var(--ink-soft)]">把图库中的图片拖到这里，会复制到 gallery/ 并对游客公开。原图会保留。</p>
+              </div>
+
               <div className={`control-card ${selectedImages.size > 0 ? 'bulk-action-active' : ''}`}>
                 <div className="mb-2 flex items-center justify-between px-3">
                   <p className="eyebrow text-[var(--muted)]">操作</p>
@@ -718,6 +796,13 @@ export default function ImageGallery() {
                     className="button-danger px-4 py-2.5 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {actionLoading ? '处理中...' : '删除'}
+                  </button>
+                  <button
+                    onClick={() => void copyToGallery(Array.from(selectedImages))}
+                    disabled={selectedImages.size === 0 || actionLoading}
+                    className="button-primary px-4 py-2.5 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    发布到画廊
                   </button>
                 </div>
               </div>
@@ -760,6 +845,11 @@ export default function ImageGallery() {
             {visibleImages.map((image, index) => (
               <article
                 key={image.key}
+                draggable
+                onDragStart={(event) => {
+                  event.dataTransfer.effectAllowed = 'copy';
+                  event.dataTransfer.setData('text/plain', image.key);
+                }}
                 className={`gallery-card group overflow-hidden rounded-[18px] border bg-white shadow-[0_14px_34px_rgba(57,91,120,0.06)] transition-all duration-300 ${
                   selectedImages.has(image.key)
                     ? 'border-[var(--accent)] shadow-[0_12px_32px_rgba(86,109,90,0.1)]'
@@ -835,7 +925,8 @@ export default function ImageGallery() {
                     </div>
                   </div>
 
-                  <button type="button" onClick={() => setActiveImage(image)} className="gallery-detail-link">查看图片详情 <span aria-hidden="true">→</span></button>
+                      <button type="button" onClick={() => setActiveImage(image)} className="gallery-detail-link">查看图片详情 <span aria-hidden="true">→</span></button>
+                  <button type="button" onClick={() => void copyToGallery([image.key])} className="gallery-detail-link">复制到公开画廊 <span aria-hidden="true">↗</span></button>
                 </div>
               </article>
             ))}
@@ -861,6 +952,11 @@ export default function ImageGallery() {
               {visibleImages.map((image, index) => (
                 <article
                   key={image.key}
+                  draggable
+                  onDragStart={(event) => {
+                    event.dataTransfer.effectAllowed = 'copy';
+                    event.dataTransfer.setData('text/plain', image.key);
+                  }}
                   className={`gallery-list-item rounded-[16px] border bg-white p-4 transition-all duration-300 ${
                     selectedImages.has(image.key)
                       ? 'border-[var(--accent)] shadow-[0_12px_28px_rgba(86,109,90,0.08)]'
@@ -928,6 +1024,7 @@ export default function ImageGallery() {
                     <div className="grid grid-cols-2 gap-2 xl:w-[9rem]">
                       <button type="button" onClick={() => void copyToClipboard(image.url, '直链')} className={getActionButtonClass('secondary')} title="复制直链">⧉</button>
                       <button type="button" onClick={() => setActiveImage(image)} className={getActionButtonClass('ghost')} title="图片详情">详情</button>
+                      <button type="button" onClick={() => void copyToGallery([image.key])} className={getActionButtonClass('secondary')} title="复制到公开画廊">画廊</button>
                     </div>
                   </div>
                 </article>

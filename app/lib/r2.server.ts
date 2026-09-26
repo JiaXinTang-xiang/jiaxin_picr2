@@ -1,5 +1,7 @@
 import {
+  CopyObjectCommand,
   DeleteObjectCommand,
+  HeadObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
@@ -33,6 +35,12 @@ export interface DeleteImagesResult {
     key: string;
     error: string;
   }>;
+}
+
+export interface CopyToGalleryResult {
+  copied: Array<{ source: string; target: string; url: string }>;
+  skipped: Array<{ source: string; reason: string }>;
+  failed: Array<{ source: string; error: string }>;
 }
 
 type RequiredEnvKey =
@@ -172,6 +180,106 @@ async function deleteImage(key: string) {
       Bucket: getBucketName(),
       Key: key,
     })
+  );
+}
+
+function encodeCopySource(bucket: string, key: string): string {
+  return `${bucket}/${key
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/')}`;
+}
+
+async function objectExists(key: string): Promise<boolean> {
+  try {
+    await getR2Client().send(
+      new HeadObjectCommand({
+        Bucket: getBucketName(),
+        Key: key,
+      })
+    );
+    return true;
+  } catch (error) {
+    const name = error && typeof error === 'object' && 'name' in error
+      ? String((error as { name?: unknown }).name)
+      : '';
+    const status = error && typeof error === 'object' && '$metadata' in error
+      ? Number((error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode)
+      : 0;
+
+    if (name === 'NotFound' || name === 'NoSuchKey' || status === 404) {
+      return false;
+    }
+
+    throw error;
+  }
+}
+
+function addCopySuffix(key: string): string {
+  const slashIndex = key.lastIndexOf('/');
+  const directory = slashIndex >= 0 ? key.slice(0, slashIndex + 1) : '';
+  const filename = slashIndex >= 0 ? key.slice(slashIndex + 1) : key;
+  const extensionIndex = filename.lastIndexOf('.');
+  const stem = extensionIndex > 0 ? filename.slice(0, extensionIndex) : filename;
+  const extension = extensionIndex > 0 ? filename.slice(extensionIndex) : '';
+  return `${directory}${stem}-copy-${Date.now()}${extension}`;
+}
+
+async function copyImageToGallery(source: string): Promise<{ source: string; target: string; url: string } | { source: string; skipped: string }> {
+  const normalizedSource = source.trim().replace(/^\/+/, '');
+  if (!normalizedSource || normalizedSource.includes('..') || normalizedSource.includes('\\')) {
+    throw new Error('Invalid source key');
+  }
+
+  if (normalizedSource.startsWith('gallery/')) {
+    return { source: normalizedSource, skipped: 'already-public' };
+  }
+
+  let target = `gallery/${normalizedSource}`;
+  if (await objectExists(target)) {
+    target = addCopySuffix(target);
+  }
+
+  await getR2Client().send(
+    new CopyObjectCommand({
+      Bucket: getBucketName(),
+      Key: target,
+      CopySource: encodeCopySource(getBucketName(), normalizedSource),
+      CacheControl: 'public, max-age=31536000',
+    })
+  );
+
+  return {
+    source: normalizedSource,
+    target,
+    url: `${getPublicUrlBase()}/${encodeObjectKey(target)}`,
+  };
+}
+
+export async function copyImagesToGallery(keys: string[]): Promise<CopyToGalleryResult> {
+  const uniqueKeys = [...new Set(keys.map((key) => key.trim()).filter(Boolean))];
+  const results = await Promise.allSettled(uniqueKeys.map((key) => copyImageToGallery(key)));
+
+  return results.reduce<CopyToGalleryResult>(
+    (accumulator, result, index) => {
+      const source = uniqueKeys[index];
+
+      if (result.status === 'fulfilled') {
+        if ('skipped' in result.value) {
+          accumulator.skipped.push({ source, reason: result.value.skipped });
+        } else {
+          accumulator.copied.push(result.value);
+        }
+        return accumulator;
+      }
+
+      accumulator.failed.push({
+        source,
+        error: result.reason instanceof Error ? result.reason.message : 'Unknown error',
+      });
+      return accumulator;
+    },
+    { copied: [], skipped: [], failed: [] }
   );
 }
 
