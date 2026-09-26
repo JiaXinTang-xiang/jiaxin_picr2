@@ -61,28 +61,8 @@ function getDisplayStem(key: string): string {
   return stem || displayName;
 }
 
-function getFileExtension(key: string): string {
-  const match = getDisplayName(key).match(/\.([^.]+)$/);
-  return match ? match[1].toUpperCase() : '';
-}
-
 function getMimeLabel(mimeType: string): string {
   return mimeType.replace('image/', '').toUpperCase();
-}
-
-function formatShortDate(value: string): string {
-  return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: 'numeric',
-    day: 'numeric',
-  }).format(new Date(value));
-}
-
-function formatClockTime(value: string): string {
-  return new Intl.DateTimeFormat('zh-CN', {
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value));
 }
 
 function formatDateTime(value: string): string {
@@ -883,7 +863,7 @@ export default function ImageGallery() {
                     : 'border-[var(--line)] hover:border-[var(--line-strong)] hover:shadow-[0_16px_36px_rgba(32,30,24,0.08)]'
                 }`}
               >
-                <div className="relative overflow-hidden bg-[var(--surface)]">
+                <div className="gallery-card-media relative overflow-hidden bg-[var(--surface)]">
                   <button
                     type="button"
                     onClick={() => setActiveImage(image)}
@@ -909,52 +889,13 @@ export default function ImageGallery() {
                     <button type="button" title="复制直链" aria-label="复制直链" onClick={() => void copyToClipboard(image.url, '直链')}>⧉</button>
                     <button type="button" title="删除图片" aria-label="删除图片" onClick={() => void deleteImage(image.key)}>×</button>
                   </div>
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[rgba(24,28,24,0.84)] via-[rgba(24,28,24,0.36)] to-transparent px-4 pb-4 pt-12">
+                  <div className="gallery-card-hover-meta">
                     <div className="min-w-0">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[rgba(252,248,241,0.72)]">
-                        第 {String(index + 1).padStart(2, '0')} 张  /  {getMimeLabel(image.mimeType)}
-                      </p>
-                      <h3
-                        title={getDisplayName(image.key)}
-                        className="mt-2 truncate text-[1.08rem] font-medium text-[var(--paper-strong)]"
-                      >
-                        {getDisplayStem(image.key)}
-                      </h3>
-                      {(image.key.startsWith('gallery/') || publishedKeys.has(image.key)) ? <span className="mt-2 inline-flex w-fit rounded-full bg-[rgba(95,159,213,.2)] px-2 py-1 text-[10px] font-semibold text-[var(--accent-strong)]">已公开</span> : null}
+                      <h3 title={getDisplayName(image.key)}>{getDisplayStem(image.key)}</h3>
+                      {(image.key.startsWith('gallery/') || publishedKeys.has(image.key)) ? <span>已公开</span> : null}
                     </div>
+                    <small>查看详情 ↗</small>
                   </div>
-                </div>
-
-                <div className="grid gap-4 p-4">
-                  <div className="min-w-0">
-                    <p className="truncate font-mono text-[12px] text-[var(--muted)]" title={getDisplayName(image.key)}>
-                      {getDisplayName(image.key)}
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-3 border-t border-[var(--line)] pt-4 text-sm text-[var(--ink-soft)]">
-                    <div className="min-w-0">
-                      <p className="eyebrow text-[var(--muted)]">大小</p>
-                      <p className="mt-2 font-medium text-[var(--ink)]">
-                        {formatFileSize(image.size)}
-                      </p>
-                    </div>
-                    <div className="min-w-0">
-                      <p className="eyebrow text-[var(--muted)]">日期</p>
-                      <p className="mt-2 font-medium text-[var(--ink)]">
-                        {formatShortDate(image.uploadedAt)}
-                      </p>
-                    </div>
-                    <div className="min-w-0">
-                      <p className="eyebrow text-[var(--muted)]">格式</p>
-                      <p className="mt-2 truncate font-medium text-[var(--ink)]">
-                        {getFileExtension(image.key) || getMimeLabel(image.mimeType)}
-                      </p>
-                    </div>
-                  </div>
-
-                      <button type="button" onClick={() => setActiveImage(image)} className="gallery-detail-link">查看图片详情 <span aria-hidden="true">→</span></button>
-                  <button type="button" onClick={() => void copyToGallery([image.key])} disabled={copyingKeys.has(image.key) || image.key.startsWith('gallery/')} className="gallery-detail-link disabled:cursor-not-allowed disabled:opacity-50">{copyingKeys.has(image.key) ? '正在发布…' : image.key.startsWith('gallery/') || publishedKeys.has(image.key) ? '已发布到公开画廊' : '复制到公开画廊'} <span aria-hidden="true">↗</span></button>
                 </div>
               </article>
             ))}
@@ -1025,34 +966,9 @@ export default function ImageGallery() {
                       </div>
                     </div>
 
-                    <div className="grid gap-4 sm:grid-cols-3 xl:gap-5">
-                      <div className="min-w-0">
-                        <p className="eyebrow text-[var(--muted)]">大小</p>
-                        <p className="mt-2 text-sm font-medium text-[var(--ink)]">
-                          {formatFileSize(image.size)}
-                        </p>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="eyebrow text-[var(--muted)]">日期</p>
-                        <p className="mt-2 text-sm font-medium text-[var(--ink)]">
-                          {formatShortDate(image.uploadedAt)}
-                        </p>
-                        <p className="mt-1 text-[12px] text-[var(--muted)]">
-                          {formatClockTime(image.uploadedAt)}
-                        </p>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="eyebrow text-[var(--muted)]">格式</p>
-                        <p className="mt-2 text-sm font-medium text-[var(--ink)]">
-                          {getFileExtension(image.key) || getMimeLabel(image.mimeType)}
-                        </p>
-                      </div>
-                    </div>
-
                     <div className="grid grid-cols-2 gap-2 xl:w-[9rem]">
                       <button type="button" onClick={() => void copyToClipboard(image.url, '直链')} className={getActionButtonClass('secondary')} title="复制直链">⧉</button>
                       <button type="button" onClick={() => setActiveImage(image)} className={getActionButtonClass('ghost')} title="图片详情">详情</button>
-                      <button type="button" onClick={() => void copyToGallery([image.key])} disabled={copyingKeys.has(image.key) || image.key.startsWith('gallery/')} className={getActionButtonClass('secondary')} title="复制到公开画廊">{image.key.startsWith('gallery/') || publishedKeys.has(image.key) ? '已公开' : '画廊'}</button>
                     </div>
                   </div>
                 </article>
@@ -1198,6 +1114,17 @@ export default function ImageGallery() {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => void copyToGallery([activeImage.key])}
+                    disabled={copyingKeys.has(activeImage.key) || activeImage.key.startsWith('gallery/') || publishedKeys.has(activeImage.key)}
+                    className={`${getActionButtonClass('secondary')} col-span-2 disabled:cursor-not-allowed disabled:opacity-50`}
+                  >
+                    {copyingKeys.has(activeImage.key)
+                      ? '正在发布到公开画廊…'
+                      : activeImage.key.startsWith('gallery/') || publishedKeys.has(activeImage.key)
+                        ? '已发布到公开画廊'
+                        : '复制到公开画廊'}
+                  </button>
                   <button
                     onClick={() => void deleteImage(activeImage.key)}
                     className={getActionButtonClass('danger')}

@@ -40,7 +40,6 @@ const formatSize = (bytes: number) => bytes < 1024
     : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 const fileName = (key: string) => key.split('/').pop() || key;
 const fileStem = (key: string) => fileName(key).replace(/\.[^.]+$/, '');
-const formatLabel = (mimeType: string) => mimeType.replace('image/', '').toUpperCase();
 const dateLabel = (value: string) => new Intl.DateTimeFormat('zh-CN', {
   year: 'numeric', month: 'short', day: 'numeric',
 }).format(new Date(value));
@@ -197,7 +196,7 @@ export default function PublicGallery() {
                   <img src={image.url} alt={fileName(image.key)} loading={index < 8 ? 'eager' : 'lazy'} />
                   <span className="lopic-card-glow" />
                   <span className="lopic-artwork-overlay">
-                    <span className="lopic-artwork-meta"><strong>{fileStem(image.key)}</strong><small>{formatLabel(image.mimeType)} · {formatSize(image.size)}</small></span>
+                    <span className="lopic-artwork-meta"><strong>{fileStem(image.key)}</strong><small>点击查看详情</small></span>
                     <span className="lopic-artwork-open">↗</span>
                   </span>
                 </button>
