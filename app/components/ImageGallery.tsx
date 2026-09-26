@@ -133,23 +133,6 @@ export default function ImageGallery() {
     void loadPage(currentCursor);
   }, [browseMode, currentCursor, prefixFilter]);
 
-  useEffect(() => {
-    if (!activeImage) {
-      return;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setActiveImage(null);
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [activeImage]);
-
   const fetchImagePage = async (cursor: string | null) => {
     const params = new URLSearchParams({
       limit: IMAGES_PER_PAGE.toString(),
@@ -528,6 +511,42 @@ export default function ImageGallery() {
 
     return sorted;
   }, [images, normalizedSearch, sortOrder, formatFilter, dateFilter]);
+
+  const activeImageIndex = activeImage
+    ? visibleImages.findIndex((image) => image.key === activeImage.key)
+    : -1;
+
+  function navigateActiveImage(direction: -1 | 1) {
+    if (visibleImages.length < 2 || activeImageIndex < 0) {
+      return;
+    }
+
+    const nextIndex = (activeImageIndex + direction + visibleImages.length) % visibleImages.length;
+    setActiveImage(visibleImages[nextIndex]);
+  }
+
+  useEffect(() => {
+    if (!activeImage) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setActiveImage(null);
+      } else if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        navigateActiveImage(-1);
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        navigateActiveImage(1);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeImage, visibleImages]);
 
   const isAllSelected =
     visibleImages.length > 0 &&
@@ -1030,43 +1049,70 @@ export default function ImageGallery() {
       </div>
 
       {activeImage ? (
-          <div
-          className="gallery-lightbox fixed inset-0 z-[70] flex items-stretch justify-end backdrop-blur-sm"
+        <div
+          className="gallery-lightbox image-detail-modal fixed inset-0 z-[70] flex items-center justify-center p-4 backdrop-blur-sm sm:p-7"
           onClick={() => setActiveImage(null)}
         >
           <div
-            className="gallery-lightbox-inner image-detail-drawer-shell grid h-full w-full max-w-[560px] grid-cols-1 gap-0 overflow-y-auto border-l border-[var(--line)] bg-[var(--paper-strong)] shadow-[0_20px_80px_rgba(13,30,49,0.24)]"
+            className="gallery-lightbox-inner image-detail-modal-shell relative grid max-h-[92vh] w-full max-w-[1180px] grid-cols-1 overflow-y-auto rounded-[24px] border border-[var(--line)] bg-[var(--paper-strong)] shadow-[0_28px_90px_rgba(0,0,0,.42)] lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,.65fr)]"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="gallery-lightbox-media flex min-h-[280px] items-center justify-center p-5">
+            <div className="gallery-lightbox-media image-detail-modal-media relative flex min-h-[360px] items-center justify-center p-6 sm:p-10">
               <img
                 src={activeImage.url}
                 alt={getDisplayName(activeImage.key)}
-                className="max-h-[42vh] w-auto max-w-full rounded-[16px] object-contain shadow-[0_18px_50px_rgba(24,30,24,0.14)]"
+                className="max-h-[62vh] w-auto max-w-full rounded-[16px] object-contain shadow-[0_22px_55px_rgba(0,0,0,.3)]"
               />
+              <button
+                type="button"
+                className="image-detail-nav image-detail-nav-prev"
+                onClick={() => navigateActiveImage(-1)}
+                disabled={visibleImages.length < 2}
+                aria-label="上一张图片"
+                title="上一张图片"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                className="image-detail-nav image-detail-nav-next"
+                onClick={() => navigateActiveImage(1)}
+                disabled={visibleImages.length < 2}
+                aria-label="下一张图片"
+                title="下一张图片"
+              >
+                ›
+              </button>
+              <div className="image-detail-counter">
+                {activeImageIndex >= 0 ? activeImageIndex + 1 : 1} / {visibleImages.length || 1}
+              </div>
             </div>
-            <aside className="gallery-lightbox-details image-detail-drawer flex flex-col justify-between gap-6 border-t border-[var(--line)] p-6 text-[var(--ink)]">
+            <aside className="gallery-lightbox-details image-detail-modal-info flex flex-col justify-between gap-6 border-t border-[var(--line)] p-6 text-[var(--ink)] lg:border-l lg:border-t-0 lg:p-8">
               <div>
                 <div className="flex items-center justify-between gap-4">
-                  <p className="eyebrow text-[var(--muted)]">当前图片</p>
+                  <div>
+                    <p className="eyebrow accent-eyebrow">图片详情</p>
+                    <p className="mt-2 text-xs text-[var(--muted)]">{activeImageIndex >= 0 ? `第 ${activeImageIndex + 1} 张，共 ${visibleImages.length} 张` : '当前图片'}</p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => setActiveImage(null)}
-                    className="button-ghost px-4 py-3"
+                    className="icon-button"
+                    aria-label="关闭详情"
                   >
-                    关闭
+                    ×
                   </button>
                 </div>
-                <h3 className="mt-5 break-words font-display text-4xl leading-tight text-[var(--ink)]">
+                <h3 className="mt-6 break-words font-display text-3xl leading-tight text-[var(--ink)] sm:text-4xl">
                   {getDisplayName(activeImage.key)}
                 </h3>
-                <p className="mt-4 break-all text-sm leading-7 text-[var(--ink-soft)]">
+                <p className="mt-4 break-all rounded-[14px] border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-xs leading-6 text-[var(--ink-soft)]">
                   {activeImage.key}
                 </p>
               </div>
 
               <div className="grid gap-4">
-                <div className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.54)] p-4">
+                <div className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] p-4">
                   <p className="eyebrow text-[var(--muted)]">文件信息</p>
                   <div className="mt-4 space-y-3 text-sm text-[var(--ink-soft)]">
                     <div className="flex justify-between gap-4">
@@ -1135,7 +1181,7 @@ export default function ImageGallery() {
                     onClick={() => setActiveImage(null)}
                     className={getActionButtonClass('ghost')}
                   >
-                    关闭详情
+                    关闭
                   </button>
                 </div>
               </div>
