@@ -35,6 +35,7 @@ interface DeleteImagesResponse {
 }
 
 type SortOrder = 'time-desc' | 'time-asc';
+type DateFilter = 'all' | 'today' | 'week' | 'month';
 
 const IMAGES_PER_PAGE = 60;
 
@@ -128,6 +129,8 @@ export default function ImageGallery() {
   const [sortOrder, setSortOrder] = useState<SortOrder>('time-desc');
   const [searchQuery, setSearchQuery] = useState('');
   const [prefixFilter, setPrefixFilter] = useState('');
+  const [formatFilter, setFormatFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const { toasts, removeToast, showSuccess, showError, showInfo } = useToast();
 
   const currentCursor = cursorHistory[pageIndex] ?? null;
@@ -396,7 +399,7 @@ export default function ImageGallery() {
     setPageIndex((prev) => prev + 1);
   };
 
-  const copyToClipboard = async (text: string, label: '链接' | 'Markdown' = '链接') => {
+  const copyToClipboard = async (text: string, label = '内容') => {
     try {
       await navigator.clipboard.writeText(text);
       showSuccess(`已复制${label}`, 1800);
@@ -404,6 +407,13 @@ export default function ImageGallery() {
       console.error('复制失败:', copyError);
       showError('复制失败，请手动复制');
     }
+  };
+
+  const getCopyText = (image: ImageInfo, format: 'url' | 'markdown' | 'html' | 'bbcode') => {
+    if (format === 'markdown') return `![${getDisplayName(image.key)}](${image.url})`;
+    if (format === 'html') return `<img src="${image.url}" alt="${getDisplayName(image.key)}" />`;
+    if (format === 'bbcode') return `[img]${image.url}[/img]`;
+    return image.url;
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -425,12 +435,21 @@ export default function ImageGallery() {
 
   const normalizedSearch = searchQuery.trim().toLowerCase();
   const visibleImages = useMemo(() => {
-    const filtered = normalizedSearch
-      ? images.filter((image) =>
-          image.key.toLowerCase().includes(normalizedSearch)
-        )
-      : images;
-
+    const now = Date.now();
+    const dateThreshold = dateFilter === 'today'
+      ? now - 24 * 60 * 60 * 1000
+      : dateFilter === 'week'
+        ? now - 7 * 24 * 60 * 60 * 1000
+        : dateFilter === 'month'
+          ? now - 30 * 24 * 60 * 60 * 1000
+          : 0;
+    const filtered = images.filter((image) => {
+      const matchesSearch = !normalizedSearch || image.key.toLowerCase().includes(normalizedSearch);
+      const matchesFormat = formatFilter === 'all' || getMimeLabel(image.mimeType) === formatFilter;
+      const uploadedTime = Date.parse(image.uploadedAt);
+      const matchesDate = dateThreshold === 0 || (!Number.isNaN(uploadedTime) && uploadedTime >= dateThreshold);
+      return matchesSearch && matchesFormat && matchesDate;
+    });
     const sorted = [...filtered];
     sorted.sort((a, b) => {
       const aTime = Date.parse(a.uploadedAt);
@@ -445,7 +464,7 @@ export default function ImageGallery() {
     });
 
     return sorted;
-  }, [images, normalizedSearch, sortOrder]);
+  }, [images, normalizedSearch, sortOrder, formatFilter, dateFilter]);
 
   const isAllSelected =
     visibleImages.length > 0 &&
@@ -573,6 +592,26 @@ export default function ImageGallery() {
               <p className="text-xs leading-5 text-[var(--muted)]">
                 目录前缀就是虚拟相册，不新增数据库；输入前缀即可查看对应目录下的图片。
               </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <label className="grid gap-1.5 text-xs font-semibold text-[var(--ink-soft)]">
+                  图片格式
+                  <select value={formatFilter} onChange={(event) => setFormatFilter(event.target.value)} className="input-surface px-3 py-2.5 text-sm">
+                    <option value="all">全部格式</option>
+                    {Array.from(new Set(images.map((image) => getMimeLabel(image.mimeType)))).sort().map((format) => (
+                      <option key={format} value={format}>{format}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="grid gap-1.5 text-xs font-semibold text-[var(--ink-soft)]">
+                  上传时间
+                  <select value={dateFilter} onChange={(event) => setDateFilter(event.target.value as DateFilter)} className="input-surface px-3 py-2.5 text-sm">
+                    <option value="all">不限时间</option>
+                    <option value="today">最近 24 小时</option>
+                    <option value="week">最近 7 天</option>
+                    <option value="month">最近 30 天</option>
+                  </select>
+                </label>
+              </div>
             </div>
 
             <div className="grid gap-2">
@@ -983,21 +1022,21 @@ export default function ImageGallery() {
 
       {activeImage ? (
           <div
-          className="gallery-lightbox fixed inset-0 z-[70] flex items-center justify-center px-4 py-8 backdrop-blur-sm"
+          className="gallery-lightbox fixed inset-0 z-[70] flex items-stretch justify-end backdrop-blur-sm"
           onClick={() => setActiveImage(null)}
         >
           <div
-            className="gallery-lightbox-inner grid max-h-full w-full max-w-6xl gap-0 overflow-hidden rounded-[20px] border border-[var(--line)] bg-[var(--paper-strong)] shadow-[0_40px_110px_rgba(39,83,120,0.2)] lg:grid-cols-[1.25fr_0.75fr]"
+            className="gallery-lightbox-inner image-detail-drawer-shell grid h-full w-full max-w-[560px] grid-cols-1 gap-0 overflow-y-auto border-l border-[var(--line)] bg-[var(--paper-strong)] shadow-[0_20px_80px_rgba(13,30,49,0.24)]"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="gallery-lightbox-media flex min-h-[320px] items-center justify-center p-6">
+            <div className="gallery-lightbox-media flex min-h-[280px] items-center justify-center p-5">
               <img
                 src={activeImage.url}
                 alt={getDisplayName(activeImage.key)}
-                className="max-h-[72vh] w-auto max-w-full rounded-[16px] object-contain shadow-[0_26px_80px_rgba(24,30,24,0.14)]"
+                className="max-h-[42vh] w-auto max-w-full rounded-[16px] object-contain shadow-[0_18px_50px_rgba(24,30,24,0.14)]"
               />
             </div>
-            <aside className="gallery-lightbox-details flex flex-col justify-between gap-6 border-t border-[var(--line)] p-6 text-[var(--ink)] lg:border-l lg:border-t-0">
+            <aside className="gallery-lightbox-details image-detail-drawer flex flex-col justify-between gap-6 border-t border-[var(--line)] p-6 text-[var(--ink)]">
               <div>
                 <div className="flex items-center justify-between gap-4">
                   <p className="eyebrow text-[var(--muted)]">当前图片</p>
@@ -1036,25 +1075,47 @@ export default function ImageGallery() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    onClick={() => void copyToClipboard(activeImage.url, '链接')}
-                    className={getActionButtonClass('secondary')}
-                  >
-                    复制
-                  </button>
-                  <button
-                    onClick={() => void copyToClipboard(`![Image](${activeImage.url})`, 'Markdown')}
-                    className={getActionButtonClass('ghost')}
-                    title="复制 Markdown"
-                  >
-                    Markdown
-                  </button>
+                <div>
+                  <p className="eyebrow text-[var(--muted)]">复制格式</p>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => void copyToClipboard(getCopyText(activeImage, 'url'), '直链')}
+                      className={getActionButtonClass('secondary')}
+                    >
+                      直链
+                    </button>
+                    <button
+                      onClick={() => void copyToClipboard(getCopyText(activeImage, 'markdown'), 'Markdown')}
+                      className={getActionButtonClass('ghost')}
+                    >
+                      Markdown
+                    </button>
+                    <button
+                      onClick={() => void copyToClipboard(getCopyText(activeImage, 'html'), 'HTML')}
+                      className={getActionButtonClass('ghost')}
+                    >
+                      HTML
+                    </button>
+                    <button
+                      onClick={() => void copyToClipboard(getCopyText(activeImage, 'bbcode'), 'BBCode')}
+                      className={getActionButtonClass('ghost')}
+                    >
+                      BBCode
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => void deleteImage(activeImage.key)}
                     className={getActionButtonClass('danger')}
                   >
                     删除
+                  </button>
+                  <button
+                    onClick={() => setActiveImage(null)}
+                    className={getActionButtonClass('ghost')}
+                  >
+                    关闭详情
                   </button>
                 </div>
               </div>

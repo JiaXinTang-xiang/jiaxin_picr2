@@ -34,6 +34,8 @@ interface PreviewImage {
   compressedFile?: File;
   isProcessing: boolean;
   relativePath: string;
+  uploadStatus?: 'idle' | 'uploading' | 'error';
+  uploadError?: string;
 }
 
 type NamingStrategy = 'preserve' | 'hash-suffix' | 'random';
@@ -335,6 +337,7 @@ export default function ImageUploader() {
       relativePath: file.webkitRelativePath
         ? file.webkitRelativePath.split('/').slice(1).join('/')
         : '',
+      uploadStatus: 'idle',
     }));
 
     const mergedPreviewImages = appendPreviews(nextPreviewImages);
@@ -380,6 +383,9 @@ export default function ImageUploader() {
 
     try {
       const snapshots = [...previewImagesRef.current];
+      setPreviewImages((prev) =>
+        prev.map((image) => ({ ...image, uploadStatus: 'uploading', uploadError: undefined }))
+      );
       const results = await mapWithConcurrency(
         snapshots,
         UPLOAD_CONCURRENCY,
@@ -409,6 +415,7 @@ export default function ImageUploader() {
       const successfulIds = new Set<string>();
       const nextUploadedImages: UploadedImage[] = [];
       const failedFiles: string[] = [];
+      const failedById = new Map<string, string>();
 
       results.forEach((item) => {
         if (item.result?.success && item.result.data) {
@@ -417,7 +424,9 @@ export default function ImageUploader() {
           return;
         }
 
-        failedFiles.push(`${item.fileName}: ${item.error || item.result?.error || '上传失败'}`);
+        const errorMessage = item.error || item.result?.error || '上传失败';
+        failedFiles.push(`${item.fileName}: ${errorMessage}`);
+        failedById.set(item.id, errorMessage);
       });
 
       if (nextUploadedImages.length > 0) {
@@ -446,6 +455,50 @@ export default function ImageUploader() {
           return remaining;
         });
       }
+
+      if (failedById.size > 0) {
+        setPreviewImages((prev) =>
+          prev.map((image) =>
+            failedById.has(image.id)
+              ? { ...image, uploadStatus: 'error', uploadError: failedById.get(image.id) }
+              : image
+          )
+        );
+      }
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const retryPreviewImage = async (id: string) => {
+    const image = previewImagesRef.current.find((item) => item.id === id);
+    if (!image || isUploading) return;
+
+    const fileToUpload =
+      enableWebpCompression && canCompress(image.file) && image.compressedFile
+        ? image.compressedFile
+        : image.file;
+    setPreviewImages((prev) => prev.map((item) => item.id === id
+      ? { ...item, uploadStatus: 'uploading', uploadError: undefined }
+      : item));
+    setIsUploading(true);
+
+    try {
+      const result = await uploadFile(fileToUpload, image.relativePath);
+      if (!result.success || !result.data) throw new Error(result.error || '上传失败');
+      setUploadedImages((prev) => [result.data!, ...prev].slice(0, 12));
+      setPreviewImages((prev) => {
+        const remaining = prev.filter((item) => item.id !== id);
+        prev.filter((item) => item.id === id).forEach(revokePreviewUrls);
+        return remaining;
+      });
+      showSuccess('图片重试上传成功');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '上传失败';
+      setPreviewImages((prev) => prev.map((item) => item.id === id
+        ? { ...item, uploadStatus: 'error', uploadError: message }
+        : item));
+      showError(`${image.file.name}: ${message}`);
     } finally {
       setIsUploading(false);
     }
@@ -813,11 +866,27 @@ export default function ImageUploader() {
                         {previewImage.isProcessing ? (
                           <span className="text-[var(--accent)]">压缩中...</span>
                         ) : null}
+                        {previewImage.uploadStatus === 'uploading' ? (
+                          <span className="text-[var(--accent-strong)]">上传中...</span>
+                        ) : null}
+                        {previewImage.uploadStatus === 'error' ? (
+                          <span className="text-[var(--danger)]" title={previewImage.uploadError}>上传失败：{previewImage.uploadError}</span>
+                        ) : null}
                       </div>
                     </div>
+                    {previewImage.uploadStatus === 'error' ? (
+                      <button
+                        onClick={() => void retryPreviewImage(previewImage.id)}
+                        className="button-secondary px-2 py-1 text-xs"
+                        disabled={isUploading}
+                      >
+                        重试
+                      </button>
+                    ) : null}
                     <button
                       onClick={() => void removePreviewImage(previewImage.id)}
                       className="button-ghost px-2 py-1 text-xs"
+                      disabled={previewImage.uploadStatus === 'uploading'}
                     >
                       删除
                     </button>

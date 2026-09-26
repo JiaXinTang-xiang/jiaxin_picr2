@@ -113,6 +113,9 @@ code, pre, .font-mono { font-family: 'JetBrains Mono', 'SFMono-Regular', Consola
 .gallery-lightbox { background: rgba(13,30,49,.74); }
 .gallery-lightbox-media { background: linear-gradient(180deg, rgba(229,241,251,.98), rgba(207,228,243,.92)); }
 .gallery-lightbox-details { background: rgba(247,251,255,.96); }
+.image-detail-drawer-shell { animation: drawer-in 220ms ease-out; }
+@keyframes drawer-in { from { transform: translateX(22px); opacity: .72; } to { transform: translateX(0); opacity: 1; } }
+html.theme-dark .image-detail-drawer-shell { background: var(--paper-strong); }
 
 html.theme-dark body { background: radial-gradient(circle at 86% 0%, rgba(45, 103, 144, .24), transparent 34rem), var(--shell); }
 html.theme-dark .site-header { background: rgba(14, 21, 29, .86); }
